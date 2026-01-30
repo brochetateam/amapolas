@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "com.github.homuler.mediapipe": {
+      "version": "file:com.github.homuler.mediapipe",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.test-framework": "1.0.0"
+      }
+    },
     "com.unity.burst": {
       "version": "1.8.27",
       "depth": 2,
@@ -215,7 +224,7 @@
     },
     "com.unity.ugui": {
       "version": "2.0.0",
-      "depth": 0,
+      "depth": 1,
       "source": "builtin",
       "dependencies": {
         "com.unity.modules.ui": "1.0.0",
