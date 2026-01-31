@@ -202,6 +202,7 @@ namespace Amapolas.Managers
                     {
                         faceSeenOnce = true;
                         CurrentState = DetectionState.WaitingForMask;
+                        if (_faceAnnotation != null) _faceAnnotation.SetActive(true);
                         OnFaceDetected?.Invoke();
                         Debug.Log("Face detected! Now: PONTE LA MASCARA");
                     }

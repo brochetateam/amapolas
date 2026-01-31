@@ -14,6 +14,7 @@ namespace Amapolas.Utils
         public static void SetupScene()
         {
             RegisterTags();
+            CleanupScene();
             
             // 0. Setup UI Canvas FIRST so others can find it
             GameObject canvasGO = GameObject.Find("UICanvas");
@@ -97,6 +98,28 @@ namespace Amapolas.Utils
             gui.statusText = tmp;
 
             Debug.Log("Scene Setup Complete! UI and Managers ready.");
+        }
+
+        private static void CleanupScene()
+        {
+            // Destroy existing managers and UI to avoid duplicates
+            string[] tagsToClean = { "Systems", "UICanvas", "MainCamera", "CorridorContainer", "KnifeSpawnPoint", "PlayerHitbox", "MediaPipeBootstrap" };
+            foreach (var name in tagsToClean)
+            {
+                GameObject go = GameObject.Find(name);
+                if (go != null) DestroyImmediate(go);
+            }
+
+            // Also search by name for things that might not have tags
+            DestroyImmediate(GameObject.Find("Systems"));
+            DestroyImmediate(GameObject.Find("UICanvas"));
+            DestroyImmediate(GameObject.Find("CorridorContainer"));
+            DestroyImmediate(GameObject.Find("MediaPipeBootstrap"));
+            DestroyImmediate(GameObject.Find("KnifePlaceholder"));
+            DestroyImmediate(GameObject.Find("LeftHandShield"));
+            DestroyImmediate(GameObject.Find("RightHandShield"));
+            DestroyImmediate(GameObject.Find("PlayerHitbox"));
+            DestroyImmediate(GameObject.Find("KnifeSpawnPoint"));
         }
 
         private static void RegisterTags()
