@@ -188,6 +188,9 @@ namespace Amapolas.Utils
             GameObject previewGO = new GameObject("CameraPreview", typeof(RectTransform), typeof(RawImage), typeof(Mediapipe.Unity.Screen));
             previewGO.transform.SetParent(canvas.transform, false);
             
+            var img = previewGO.GetComponent<RawImage>();
+            img.color = Color.white; // Ensure it's not transparent or black
+            
             RectTransform rt = previewGO.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(1, 1);
             rt.anchorMax = new Vector2(1, 1);
@@ -197,8 +200,8 @@ namespace Amapolas.Utils
 
             var screen = previewGO.GetComponent<Mediapipe.Unity.Screen>();
             // Use SerializedObject for private _screen field
-            var so = new SerializedObject(previewGO);
-            so.FindProperty("_screen").objectReferenceValue = previewGO.GetComponent<RawImage>();
+            var so = new SerializedObject(screen); // Note: Should target the Screen component, not previewGO
+            so.FindProperty("_screen").objectReferenceValue = img;
             so.ApplyModifiedProperties();
 
             // Assign to detection manager

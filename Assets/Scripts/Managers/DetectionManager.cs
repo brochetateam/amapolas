@@ -31,6 +31,7 @@ namespace Amapolas.Managers
         
         [Header("Detection Settings")]
         public string modelPath = "face_landmarker_v2_with_blendshapes.bytes";
+        public float maskDetectionDelay = 1.5f; // Tiempo que debe desaparecer la cara para confirmar máscara
         
         [Header("Debug Settings")]
         public bool useWebcam = true;
@@ -41,6 +42,7 @@ namespace Amapolas.Managers
         private Mediapipe.Unity.Experimental.TextureFramePool _textureFramePool;
         private bool faceSeenOnce = false;
         private bool _isFaceDetectedReal = false;
+        private float _faceLostTimer = 0f;
 
         private void Awake()
         {
@@ -134,6 +136,13 @@ namespace Amapolas.Managers
         private void Update()
         {
             HandleDebugInput();
+            
+            // Ensure Screen Texture is always up to date (Fallback if Initialize was too early)
+            if (_screen != null && _imageSource != null && _imageSource.isPrepared)
+            {
+                if (_screen.texture == null) _screen.texture = _imageSource.GetCurrentTexture();
+            }
+
             UpdateDetectionLogic();
         }
 
@@ -173,9 +182,17 @@ namespace Amapolas.Managers
                 case DetectionState.WaitingForMask:
                     if (!isFaceCurrentlyDetected && faceSeenOnce)
                     {
-                        CurrentState = DetectionState.InGame;
-                        OnMaskPutOn?.Invoke();
-                        Debug.Log("Mask detected (Face lost)! Starting Game...");
+                        _faceLostTimer += Time.deltaTime;
+                        if (_faceLostTimer >= maskDetectionDelay)
+                        {
+                            CurrentState = DetectionState.InGame;
+                            OnMaskPutOn?.Invoke();
+                            Debug.Log("Mask confirmed! Starting Game...");
+                        }
+                    }
+                    else
+                    {
+                        _faceLostTimer = 0f; // Face returned or still seen
                     }
                     break;
                 
