@@ -58,9 +58,25 @@ namespace Amapolas.Gameplay
         {
             if (knifePrefab == null) return;
 
-            GameObject knife = Instantiate(knifePrefab, knifeSpawnPoint.position, Quaternion.identity);
+            GameSector sector = (GameSector)Random.Range(0, 4);
+            
+            // Spawn far away with some variation
+            Vector3 spawnPos = knifeSpawnPoint.position;
+            spawnPos += GetSectorInWorld(sector, 10f); // 10m spread at spawn
+
+            GameObject knife = Instantiate(knifePrefab, spawnPos, Quaternion.identity);
             Knife projectile = knife.AddComponent<Knife>();
             projectile.speed = gameSpeed * 1.5f;
+            
+            // Target the sector position relative to player
+            projectile.SetSectorTarget(sector);
+        }
+
+        private Vector3 GetSectorInWorld(GameSector sector, float spread)
+        {
+            float x = (sector == GameSector.TopLeft || sector == GameSector.BottomLeft) ? -spread : spread;
+            float y = (sector == GameSector.TopLeft || sector == GameSector.TopRight) ? spread : -spread;
+            return new Vector3(x, y, 0);
         }
     }
 
@@ -71,27 +87,33 @@ namespace Amapolas.Gameplay
         private Vector3 direction;
         private bool isDeflected = false;
 
-        void Start()
+        public void SetSectorTarget(GameSector sector)
         {
             playerCamera = Camera.main.transform;
-            // Target the camera position at spawn time
-            direction = (playerCamera.position - transform.position).normalized;
+            
+            // Define target point in front of camera based on sector
+            float spread = 0.8f; // How far from center the target is
+            float x = (sector == GameSector.TopLeft || sector == GameSector.BottomLeft) ? -spread : spread;
+            float y = (sector == GameSector.TopLeft || sector == GameSector.TopRight) ? spread : -spread;
+            
+            Vector3 targetPos = playerCamera.position + playerCamera.forward * 2f + playerCamera.right * x + playerCamera.up * (y + 1.6f); // 1.6 is floor offset
+            
+            direction = (targetPos - transform.position).normalized;
+            transform.LookAt(targetPos);
         }
 
         void Update()
         {
             if (!isDeflected)
             {
-                // Still moving towards player (even if player moves, we could update direction or keep it linear)
                 transform.position += direction * speed * Time.deltaTime;
             }
             else
             {
-                transform.Translate(direction * speed * Time.deltaTime);
+                transform.Translate(Vector3.forward * speed * Time.deltaTime);
             }
 
-            // Destroy if passed player or too far
-            if (Vector3.Distance(transform.position, playerCamera.position) > 50f && transform.position.z < playerCamera.position.z)
+            if (Vector3.Distance(transform.position, playerCamera.position) > 50f)
             {
                 Destroy(gameObject);
             }
@@ -101,15 +123,18 @@ namespace Amapolas.Gameplay
         {
             if (other.CompareTag("Shield")) 
             {
-                Debug.Log("Knife Blocked!");
                 isDeflected = true;
                 direction = new Vector3(Random.Range(-1f, 1f), 1f, 1f).normalized;
                 speed *= 0.5f;
+                
+                // Visual feedback to manager
+                var manager = FindObjectOfType<HandBlockingManager>();
+                if (manager != null) manager.HandleBlock();
+                
                 Destroy(gameObject, 2f);
             }
             else if (other.CompareTag("Player"))
             {
-                Debug.Log("Hit Player!");
                 if (Managers.GameUI.Instance != null) Managers.GameUI.Instance.TriggerHitFeedback();
                 Destroy(gameObject);
             }
