@@ -10,6 +10,7 @@ namespace Amapolas.Utils
         [MenuItem("Amapolas/Setup Initial Scene")]
         public static void SetupScene()
         {
+            RegisterTags();
             // 1. Create Managers
             GameObject managersGO = new GameObject("Systems");
             managersGO.AddComponent<Managers.DetectionManager>();
@@ -52,17 +53,11 @@ namespace Amapolas.Utils
             playerHitbox.tag = "Player";
 
             // 6. Support for Hand Shields
-            GameObject leftHand = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            leftHand.name = "LeftHandShield";
-            leftHand.transform.localScale = Vector3.one * 0.3f;
-            leftHand.tag = "Shield";
-            leftHand.GetComponent<SphereCollider>().isTrigger = true;
-            
-            GameObject rightHand = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            rightHand.name = "RightHandShield";
-            rightHand.transform.localScale = Vector3.one * 0.3f;
-            rightHand.tag = "Shield";
-            rightHand.GetComponent<SphereCollider>().isTrigger = true;
+            CreateShield(new Vector3(-0.5f, 1.6f, 1f), "LeftHandShield");
+            CreateShield(new Vector3(0.5f, 1.6f, 1f), "RightHandShield");
+
+            // 7. Corridor Blocking Setup
+            CreateCorridorBlocking();
 
             // 7. UI Setup (Minimal)
             GameObject canvasGO = new GameObject("UICanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -84,6 +79,79 @@ namespace Amapolas.Utils
             gui.statusText = tmp;
 
             Debug.Log("Scene Setup Complete! Use 'F' to simulate face, then 'M' to start game.");
+        }
+
+        private static void RegisterTags()
+        {
+            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            SerializedProperty tagsProp = tagManager.FindProperty("tags");
+
+            string[] neededTags = { "Shield", "Player" };
+            foreach (string tag in neededTags)
+            {
+                bool exists = false;
+                for (int i = 0; i < tagsProp.arraySize; i++)
+                {
+                    if (tagsProp.GetArrayElementAtIndex(i).stringValue == tag) { exists = true; break; }
+                }
+                if (!exists)
+                {
+                    tagsProp.InsertArrayElementAtIndex(tagsProp.arraySize);
+                    tagsProp.GetArrayElementAtIndex(tagsProp.arraySize - 1).stringValue = tag;
+                    Debug.Log($"[TagSetup] Tag '{tag}' added.");
+                }
+            }
+            tagManager.ApplyModifiedProperties();
+        }
+
+        private static void CreateShield(Vector3 pos, string name)
+        {
+            GameObject shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            shield.name = name;
+            shield.transform.position = pos;
+            shield.transform.localScale = Vector3.one * 0.3f;
+            shield.tag = "Shield";
+            shield.GetComponent<SphereCollider>().isTrigger = true;
+        }
+
+        private static void CreateCorridorBlocking()
+        {
+            GameObject root = new GameObject("CorridorContainer");
+            root.AddComponent<Gameplay.InfiniteCorridor>();
+
+            // Create a simple blocking prefab for the tile
+            GameObject tile = new GameObject("CorridorTile_Blocking");
+            
+            // Floor
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "Floor";
+            floor.transform.SetParent(tile.transform);
+            floor.transform.localScale = new Vector3(5, 0.1f, 10);
+            
+            // Left Wall
+            GameObject leftWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leftWall.name = "LeftWall";
+            leftWall.transform.SetParent(tile.transform);
+            leftWall.transform.position = new Vector3(-2.5f, 2.5f, 0);
+            leftWall.transform.localScale = new Vector3(0.1f, 5, 10);
+
+            // Right Wall
+            GameObject rightWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rightWall.name = "RightWall";
+            rightWall.transform.SetParent(tile.transform);
+            rightWall.transform.position = new Vector3(2.5f, 2.5f, 0);
+            rightWall.transform.localScale = new Vector3(0.1f, 5, 10);
+
+            // Ceiling
+            GameObject ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ceiling.name = "Ceiling";
+            ceiling.transform.SetParent(tile.transform);
+            ceiling.transform.position = new Vector3(0, 5, 0);
+            ceiling.transform.localScale = new Vector3(5, 0.1f, 10);
+
+            tile.transform.position = new Vector3(0, 0, -100); // Hide template
+            var ic = root.GetComponent<Gameplay.InfiniteCorridor>();
+            ic.corridorTilePrefab = tile;
         }
     }
 }

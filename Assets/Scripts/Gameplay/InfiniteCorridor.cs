@@ -5,6 +5,10 @@ namespace Amapolas.Gameplay
 {
     public class InfiniteCorridor : MonoBehaviour
     {
+        public enum MovementType { CorridorMovesTowardsPlayer, PlayerMovesThroughCorridor }
+        
+        [Header("Settings")]
+        public MovementType movementMode = MovementType.CorridorMovesTowardsPlayer;
         public GameObject corridorTilePrefab;
         public int initialTiles = 5;
         public float tileLength = 10f;
@@ -29,14 +33,25 @@ namespace Amapolas.Gameplay
             
             float speed = GameplayManager.Instance.gameSpeed;
             
-            // Move tiles
-            foreach (var tile in activeTiles)
+            if (movementMode == MovementType.CorridorMovesTowardsPlayer)
             {
-                tile.transform.Translate(Vector3.back * speed * Time.deltaTime);
+                // Tiles move towards camera
+                foreach (var tile in activeTiles)
+                {
+                    tile.transform.Translate(Vector3.back * speed * Time.deltaTime);
+                }
+            }
+            else
+            {
+                // Camera moves forward
+                cameraTransform.Translate(Vector3.forward * speed * Time.deltaTime);
+                // Parent the shields to the camera so they follow the player
+                // (In a real scenario, Hand tracking would be in screen space or world space relative to camera)
             }
 
             // Recycle tiles
-            if (activeTiles[0].transform.position.z < -tileLength)
+            float playerZ = cameraTransform.position.z;
+            if (activeTiles[0].transform.position.z < playerZ - tileLength)
             {
                 GameObject tile = activeTiles[0];
                 activeTiles.RemoveAt(0);

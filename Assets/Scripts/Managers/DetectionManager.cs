@@ -1,6 +1,7 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System;
 
 namespace Amapolas.Managers
@@ -42,14 +43,14 @@ namespace Amapolas.Managers
 
         private void HandleDebugInput()
         {
-            if (!useWebcam)
+            if (!useWebcam && Keyboard.current != null)
             {
-                if (Input.GetKeyDown(KeyCode.F)) // Simulate Face Detected
+                if (Keyboard.current.fKey.wasPressedThisFrame) // Simulate Face Detected
                 {
                     mockFaceDetected = true;
                     Debug.Log("[Debug] Face Detected simulated");
                 }
-                if (Input.GetKeyDown(KeyCode.M)) // Simulate Mask Put On (Face Lost)
+                if (Keyboard.current.mKey.wasPressedThisFrame) // Simulate Mask Put On (Face Lost)
                 {
                     mockFaceDetected = false;
                     Debug.Log("[Debug] Mask Put On simulated");

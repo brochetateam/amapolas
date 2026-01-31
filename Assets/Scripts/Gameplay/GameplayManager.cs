@@ -67,14 +67,31 @@ namespace Amapolas.Gameplay
     public class Knife : MonoBehaviour
     {
         public float speed;
-        private Vector3 targetDir = Vector3.back; // Towards camera
+        private Transform playerCamera;
+        private Vector3 direction;
+        private bool isDeflected = false;
+
+        void Start()
+        {
+            playerCamera = Camera.main.transform;
+            // Target the camera position at spawn time
+            direction = (playerCamera.position - transform.position).normalized;
+        }
 
         void Update()
         {
-            transform.Translate(targetDir * speed * Time.deltaTime);
+            if (!isDeflected)
+            {
+                // Still moving towards player (even if player moves, we could update direction or keep it linear)
+                transform.position += direction * speed * Time.deltaTime;
+            }
+            else
+            {
+                transform.Translate(direction * speed * Time.deltaTime);
+            }
 
-            // Destroy if passed player
-            if (transform.position.z < -5f)
+            // Destroy if passed player or too far
+            if (Vector3.Distance(transform.position, playerCamera.position) > 50f && transform.position.z < playerCamera.position.z)
             {
                 Destroy(gameObject);
             }
@@ -82,11 +99,11 @@ namespace Amapolas.Gameplay
 
         private void OnTriggerEnter(Collider other)
         {
-            if (other.CompareTag("Shield")) // This will be the hand detection zone
+            if (other.CompareTag("Shield")) 
             {
                 Debug.Log("Knife Blocked!");
-                // Deflect knife
-                targetDir = new Vector3(Random.Range(-1f, 1f), 1f, 1f).normalized;
+                isDeflected = true;
+                direction = new Vector3(Random.Range(-1f, 1f), 1f, 1f).normalized;
                 speed *= 0.5f;
                 Destroy(gameObject, 2f);
             }
@@ -94,7 +111,6 @@ namespace Amapolas.Gameplay
             {
                 Debug.Log("Hit Player!");
                 Destroy(gameObject);
-                // Handle Damage
             }
         }
     }
