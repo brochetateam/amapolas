@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Mediapipe;
 using Mediapipe.Unity;
 using Mediapipe.Unity.Sample;
 using Mediapipe.Tasks.Vision.FaceLandmarker;
