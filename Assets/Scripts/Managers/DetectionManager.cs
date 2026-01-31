@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Mediapipe.Unity;
 using Mediapipe.Unity.Sample;
+using Mediapipe.Tasks.Vision.FaceLandmarker;
 using System.Collections;
 using System.Collections.Generic;
 using System;
@@ -28,12 +29,18 @@ namespace Amapolas.Managers
         [Header("MediaPipe Components")]
         [SerializeField] private Mediapipe.Unity.Screen _screen;
         
+        [Header("Detection Settings")]
+        public string modelPath = "face_landmarker_v2_with_blendshapes.bytes";
+        
         [Header("Debug Settings")]
         public bool useWebcam = true;
         [SerializeField] private bool mockFaceDetected = false;
         
         private ImageSource _imageSource;
+        private FaceLandmarker _faceLandmarker;
+        private Mediapipe.Unity.Experimental.TextureFramePool _textureFramePool;
         private bool faceSeenOnce = false;
+        private bool _isFaceDetectedReal = false;
 
         private void Awake()
         {
@@ -62,10 +69,65 @@ namespace Amapolas.Managers
             if (_imageSource != null)
             {
                 yield return _imageSource.Play();
+                
+                // CRITICAL: Wait until texture is actually ready
+                yield return new WaitUntil(() => _imageSource.textureWidth > 0);
+
                 if (_imageSource.isPrepared && _screen != null)
                 {
                     _screen.Initialize(_imageSource);
                 }
+
+                // Initialize FaceLandmarker
+                yield return InitializeFaceLandmarker();
+                
+                // Start Processing Loop
+                StartCoroutine(ProcessFrames());
+            }
+        }
+
+        private IEnumerator InitializeFaceLandmarker()
+        {
+            yield return AssetLoader.PrepareAssetAsync(modelPath);
+            
+            var options = new FaceLandmarkerOptions(
+                new Mediapipe.Tasks.Core.BaseOptions(Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU, modelAssetPath: modelPath),
+                runningMode: Mediapipe.Tasks.Vision.Core.RunningMode.IMAGE,
+                numFaces: 1
+            );
+            
+            _faceLandmarker = FaceLandmarker.CreateFromOptions(options);
+            _textureFramePool = new Mediapipe.Unity.Experimental.TextureFramePool(_imageSource.textureWidth, _imageSource.textureHeight, TextureFormat.RGBA32, 5);
+        }
+
+        private IEnumerator ProcessFrames()
+        {
+            var waitForEndOfFrame = new WaitForEndOfFrame();
+            var result = FaceLandmarkerResult.Alloc(1);
+
+            while (_faceLandmarker != null)
+            {
+                if (!_textureFramePool.TryGetTextureFrame(out var textureFrame))
+                {
+                    yield return null;
+                    continue;
+                }
+
+                yield return waitForEndOfFrame;
+                textureFrame.ReadTextureOnCPU(_imageSource.GetCurrentTexture());
+                var image = textureFrame.BuildCPUImage();
+                
+                if (_faceLandmarker.TryDetect(image, null, ref result))
+                {
+                    _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
+                }
+                else
+                {
+                    _isFaceDetectedReal = false;
+                }
+
+                textureFrame.Release();
+                yield return new WaitForSeconds(0.1f); // Reduce CPU load
             }
         }
 
@@ -125,13 +187,23 @@ namespace Amapolas.Managers
 
         private bool GetFaceDetectionStatus()
         {
-            if (Keyboard.current != null)
+            if (!useWebcam)
             {
-                if (Keyboard.current.fKey.wasPressedThisFrame) mockFaceDetected = true;
-                if (Keyboard.current.mKey.wasPressedThisFrame) mockFaceDetected = false;
+                if (Keyboard.current != null)
+                {
+                    if (Keyboard.current.fKey.wasPressedThisFrame) mockFaceDetected = true;
+                    if (Keyboard.current.mKey.wasPressedThisFrame) mockFaceDetected = false;
+                }
+                return mockFaceDetected;
             }
             
-            return mockFaceDetected; 
+            return _isFaceDetectedReal; 
+        }
+
+        private void OnDestroy()
+        {
+            _faceLandmarker?.Close();
+            _textureFramePool?.Dispose();
         }
 
         // Method to be called by MediaPipe Hand Task

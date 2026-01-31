@@ -625,8 +625,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f82a1458def899f4abbbad1857c129d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Amapolas.Managers.DetectionManager
-  useWebcam: 1
-  mockFaceDetected: 0
+  _screen: {fileID: 0}
+  modelPath: face_landmarker_v2_with_blendshapes.bytes
+  useWebcam: 0
+  mockFaceDetected: 1
 --- !u!4 &158033796
 Transform:
   m_ObjectHideFlags: 0
