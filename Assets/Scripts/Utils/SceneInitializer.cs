@@ -150,7 +150,7 @@ namespace Amapolas.Utils
             
             // Add a visual material if possible, or just color it
             var renderer = shield.GetComponent<Renderer>();
-            renderer.material.color = new Color(0, 0.8f, 1f, 0.5f);
+            renderer.sharedMaterial.color = new Color(0, 0.8f, 1f, 0.5f);
             
             return shield;
         }
