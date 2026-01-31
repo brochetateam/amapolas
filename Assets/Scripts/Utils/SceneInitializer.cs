@@ -2,6 +2,9 @@ using UnityEngine;
 using UnityEditor;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using Mediapipe.Unity;
+using Mediapipe.Unity.Sample;
 
 namespace Amapolas.Utils
 {
@@ -11,6 +14,10 @@ namespace Amapolas.Utils
         public static void SetupScene()
         {
             RegisterTags();
+            
+            // 0. Setup MediaPipe Bootstrap
+            SetupMediaPipe();
+
             // 1. Create Managers
             GameObject managersGO = new GameObject("Systems");
             managersGO.AddComponent<Managers.DetectionManager>();
@@ -33,7 +40,10 @@ namespace Amapolas.Utils
             var gameplay = managersGO.GetComponent<Gameplay.GameplayManager>();
             gameplay.knifeSpawnPoint = spawnPoint.transform;
 
-            // 4. Create Knife Prefab (Rectangle)
+            // 4. Create Video Preview (Visual Feedback)
+            SetupCameraPreview(managersGO.GetComponent<Managers.DetectionManager>());
+
+            // 5. Create Knife Prefab (Rectangle)
             GameObject cubePrefab = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cubePrefab.name = "KnifePlaceholder";
             cubePrefab.transform.localScale = new Vector3(0.1f, 0.1f, 0.5f);
@@ -152,6 +162,49 @@ namespace Amapolas.Utils
             tile.transform.position = new Vector3(0, 0, -100); // Hide template
             var ic = root.GetComponent<Gameplay.InfiniteCorridor>();
             ic.corridorTilePrefab = tile;
+        }
+
+        private static void SetupMediaPipe()
+        {
+            GameObject bootstrapGO = new GameObject("MediaPipeBootstrap");
+            var bootstrap = bootstrapGO.AddComponent<Bootstrap>();
+            
+            // Load AppSettings from the path found earlier
+            AppSettings settings = AssetDatabase.LoadAssetAtPath<AppSettings>("Assets/MediaPipeUnity/Samples/Scenes/AppSettings.asset");
+            if (settings != null)
+            {
+                // Assign via SerializedObject to private field if necessary, or just rely on manual link if possible
+                var so = new SerializedObject(bootstrap);
+                so.FindProperty("_appSettings").objectReferenceValue = settings;
+                so.ApplyModifiedProperties();
+            }
+        }
+
+        private static void SetupCameraPreview(Managers.DetectionManager detManager)
+        {
+            GameObject canvas = GameObject.Find("UICanvas");
+            if (canvas == null) return;
+
+            GameObject previewGO = new GameObject("CameraPreview", typeof(RectTransform), typeof(RawImage), typeof(Mediapipe.Unity.Screen));
+            previewGO.transform.SetParent(canvas.transform, false);
+            
+            RectTransform rt = previewGO.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(1, 1);
+            rt.anchorMax = new Vector2(1, 1);
+            rt.pivot = new Vector2(1, 1);
+            rt.anchoredPosition = new Vector2(-10, -10);
+            rt.sizeDelta = new Vector2(320, 180);
+
+            var screen = previewGO.GetComponent<Mediapipe.Unity.Screen>();
+            // Use SerializedObject for private _screen field
+            var so = new SerializedObject(previewGO);
+            so.FindProperty("_screen").objectReferenceValue = previewGO.GetComponent<RawImage>();
+            so.ApplyModifiedProperties();
+
+            // Assign to detection manager
+            var soDet = new SerializedObject(detManager);
+            soDet.FindProperty("_screen").objectReferenceValue = screen;
+            soDet.ApplyModifiedProperties();
         }
     }
 }
