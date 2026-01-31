@@ -7,6 +7,7 @@ TagManager:
   - Global Resource
   - Shield
   - Player
+  - Knife
   layers:
   - Default
   - TransparentFX
