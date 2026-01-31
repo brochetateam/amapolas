@@ -75,11 +75,17 @@ namespace Amapolas.Utils
             // 9. Corridor Blocking Setup
             CreateCorridorBlocking();
 
-            // 10. Status UI Setup
+            // 10. Status UI Setup - Move to BOTTOM
             GameObject panel = new GameObject("MessagePanel", typeof(Image));
             panel.transform.SetParent(canvasGO.transform, false);
-            panel.GetComponent<RectTransform>().sizeDelta = new Vector2(400, 100);
-            
+            var panelRT = panel.GetComponent<RectTransform>();
+            panelRT.anchorMin = new Vector2(0.5f, 0);
+            panelRT.anchorMax = new Vector2(0.5f, 0);
+            panelRT.pivot = new Vector2(0.5f, 0);
+            panelRT.anchoredPosition = new Vector2(0, 50);
+            panelRT.sizeDelta = new Vector2(600, 80);
+            panel.GetComponent<Image>().color = new Color(0, 0, 0, 0.7f);
+
             GameObject textGO = new GameObject("StatusText", typeof(TextMeshProUGUI));
             textGO.transform.SetParent(panel.transform, false);
             var tmp = textGO.GetComponent<TextMeshProUGUI>();
@@ -238,11 +244,30 @@ namespace Amapolas.Utils
             }
 
             var soAnnoCtrl = new SerializedObject(annoController);
-            soAnnoCtrl.FindProperty("_annotation").objectReferenceValue = multiAnno;
+            soAnnoCtrl.FindProperty("annotation").objectReferenceValue = multiAnno;
             soAnnoCtrl.ApplyModifiedProperties();
 
+            // 5. Mask Overlay (Hidden by default)
+            GameObject maskGO = new GameObject("Mask Overlay", typeof(RectTransform), typeof(Image));
+            maskGO.transform.SetParent(screenGO.transform, false);
+            var maskRT = maskGO.GetComponent<RectTransform>();
+            maskRT.anchorMin = Vector2.zero;
+            maskRT.anchorMax = Vector2.one;
+            maskRT.sizeDelta = Vector2.zero;
+            var maskImg = maskGO.GetComponent<Image>();
+            
+            // Try to load our generated mask icon
+            Sprite maskSprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/mask_icon.png");
+            if (maskSprite != null) maskImg.sprite = maskSprite;
+            else maskImg.color = new Color(1, 1, 1, 0.5f); // Fallback color
+            
+            maskGO.SetActive(false);
+
+            // Assign everything to detection manager
             var soDet = new SerializedObject(detManager);
             soDet.FindProperty("_screen").objectReferenceValue = screen;
+            soDet.FindProperty("_faceAnnotation").objectReferenceValue = faceAnnotationGO;
+            soDet.FindProperty("_maskOverlay").objectReferenceValue = maskGO;
             soDet.ApplyModifiedProperties();
         }
     }

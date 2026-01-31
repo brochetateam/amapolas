@@ -34,6 +34,10 @@ namespace Amapolas.Managers
         public string modelPath = "face_landmarker_v2_with_blendshapes.bytes";
         public float maskDetectionDelay = 1.5f; // Tiempo que debe desaparecer la cara para confirmar máscara
         
+        [Header("UI & Visuals")]
+        [SerializeField] private GameObject _faceAnnotation;
+        [SerializeField] private GameObject _maskOverlay;
+        
         [Header("Debug Settings")]
         public bool useWebcam = true;
         [SerializeField] private bool mockFaceDetected = false;
@@ -81,6 +85,9 @@ namespace Amapolas.Managers
                 {
                     _screen.Initialize(_imageSource);
                 }
+
+                if (_faceAnnotation != null) _faceAnnotation.SetActive(true);
+                if (_maskOverlay != null) _maskOverlay.SetActive(false);
 
                 // Find Annotation Controller
                 _annotationController = FindFirstObjectByType<FaceLandmarkerResultAnnotationController>();
@@ -207,6 +214,8 @@ namespace Amapolas.Managers
                         if (_faceLostTimer >= maskDetectionDelay)
                         {
                             CurrentState = DetectionState.InGame;
+                            if (_faceAnnotation != null) _faceAnnotation.SetActive(false);
+                            if (_maskOverlay != null) _maskOverlay.SetActive(true);
                             OnMaskPutOn?.Invoke();
                             Debug.Log("Mask confirmed! Starting Game...");
                         }
