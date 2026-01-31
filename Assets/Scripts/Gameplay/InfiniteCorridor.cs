@@ -10,8 +10,8 @@ namespace Amapolas.Gameplay
         [Header("Settings")]
         public MovementType movementMode = MovementType.CorridorMovesTowardsPlayer;
         public GameObject corridorTilePrefab;
-        public int initialTiles = 5;
-        public float tileLength = 10f;
+        public int initialTiles = 10;
+        public float tileLength = 15f;
         
         private List<GameObject> activeTiles = new List<GameObject>();
         private Transform cameraTransform;
@@ -68,6 +68,7 @@ namespace Amapolas.Gameplay
             if (corridorTilePrefab != null)
             {
                 tile = Instantiate(corridorTilePrefab, new Vector3(0, 0, zPos), Quaternion.identity, transform);
+                tile.transform.localScale = new Vector3(2f, 2f, 1f); // Make it 2x larger
             }
             else
             {
@@ -75,7 +76,7 @@ namespace Amapolas.Gameplay
                 tile = GameObject.CreatePrimitive(PrimitiveType.Plane);
                 tile.transform.position = new Vector3(0, 0, zPos);
                 tile.transform.rotation = Quaternion.Euler(0, 0, 0);
-                tile.transform.localScale = new Vector3(0.5f, 1, 1f);
+                tile.transform.localScale = new Vector3(4f, 1, 1.5f); // Wider and deeper
                 tile.transform.SetParent(transform);
             }
             activeTiles.Add(tile);

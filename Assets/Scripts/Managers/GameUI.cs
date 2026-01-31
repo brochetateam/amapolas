@@ -14,6 +14,7 @@ namespace Amapolas.Managers
         public TextMeshProUGUI statusText;
         public Image hitOverlay;
         public Image blockOverlay;
+        public Slider healthSlider;
 
         private void Awake()
         {
@@ -60,24 +61,39 @@ namespace Amapolas.Managers
 
         public void TriggerHitFeedback()
         {
-            if (hitOverlay != null) StartCoroutine(FlashOverlay(hitOverlay, Color.red));
+            if (hitOverlay != null) StartCoroutine(FlashOverlay(hitOverlay, new Color(1, 0, 0, 0.5f)));
+        }
+
+        public void TriggerHealFeedback()
+        {
+            if (hitOverlay != null) StartCoroutine(FlashOverlay(hitOverlay, new Color(1, 0.8f, 0, 0.3f))); // Golden flash for heal
         }
 
         public void TriggerBlockFeedback()
         {
-            if (blockOverlay != null) StartCoroutine(FlashOverlay(blockOverlay, Color.green));
+            if (blockOverlay != null) StartCoroutine(FlashOverlay(blockOverlay, new Color(0, 1, 0, 0.5f)));
+        }
+
+        public void UpdateHealth(float current, float max)
+        {
+            if (healthSlider != null)
+            {
+                healthSlider.maxValue = max;
+                healthSlider.value = current;
+            }
         }
 
         IEnumerator FlashOverlay(Image img, Color color)
         {
-            img.color = new Color(color.r, color.g, color.b, 0.5f);
+            img.color = color;
             img.gameObject.SetActive(true);
             float duration = 0.2f;
             float elapsed = 0f;
+            float startAlpha = color.a;
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
-                img.color = new Color(color.r, color.g, color.b, Mathf.Lerp(0.5f, 0f, elapsed / duration));
+                img.color = new Color(color.r, color.g, color.b, Mathf.Lerp(startAlpha, 0f, elapsed / duration));
                 yield return null;
             }
             img.gameObject.SetActive(false);

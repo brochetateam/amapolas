@@ -30,10 +30,14 @@ namespace Amapolas.Managers
         [Header("MediaPipe Components")]
         [SerializeField] private Mediapipe.Unity.Screen _screen;
         
+        [Header("Performance Settings")]
+        public int targetWidth = 640;
+        public bool useAsyncReadback = true;
+
         [Header("Detection Settings")]
         public string modelPath = "face_landmarker_v2_with_blendshapes.bytes";
         public float maskDetectionDelay = 1.5f; // Tiempo que debe desaparecer la cara para confirmar máscara
-        
+
         [Header("Debug Settings")]
         public bool useWebcam = true;
         [SerializeField] private bool mockFaceDetected = false;
@@ -74,6 +78,9 @@ namespace Amapolas.Managers
             _imageSource = ImageSourceProvider.ImageSource;
             if (_imageSource != null)
             {
+                // Select a lower resolution for performance
+                SelectOptimizedResolution();
+
                 yield return _imageSource.Play();
                 
                 // CRITICAL: Wait until texture is actually ready
@@ -107,12 +114,41 @@ namespace Amapolas.Managers
             }
         }
 
+        private void SelectOptimizedResolution()
+        {
+            if (_imageSource == null) return;
+
+            var resolutions = _imageSource.availableResolutions;
+            if (resolutions == null || resolutions.Length == 0) return;
+
+            int bestIndex = 0;
+            int minDiff = int.MaxValue;
+
+            for (int i = 0; i < resolutions.Length; i++)
+            {
+                int diff = Mathf.Abs(resolutions[i].width - targetWidth);
+                if (diff < minDiff)
+                {
+                    minDiff = diff;
+                    bestIndex = i;
+                }
+            }
+
+            Debug.Log($"[DetectionManager] Selecting resolution: {resolutions[bestIndex]} (Target: {targetWidth})");
+            _imageSource.SelectResolution(bestIndex);
+        }
+
         private IEnumerator InitializeFaceLandmarker()
         {
             yield return AssetLoader.PrepareAssetAsync(modelPath);
             
+            var delegateType = Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU;
+#if !UNITY_EDITOR
+            delegateType = Mediapipe.Tasks.Core.BaseOptions.Delegate.GPU;
+#endif
+
             var options = new FaceLandmarkerOptions(
-                new Mediapipe.Tasks.Core.BaseOptions(Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU, modelAssetPath: modelPath),
+                new Mediapipe.Tasks.Core.BaseOptions(delegateType, modelAssetPath: modelPath),
                 runningMode: Mediapipe.Tasks.Vision.Core.RunningMode.IMAGE,
                 numFaces: 1
             );
@@ -155,8 +191,21 @@ namespace Amapolas.Managers
                     continue;
                 }
 
-                yield return waitForEndOfFrame;
-                textureFrame.ReadTextureOnCPU(_imageSource.GetCurrentTexture());
+                if (useAsyncReadback)
+                {
+                    var req = textureFrame.ReadTextureAsync(_imageSource.GetCurrentTexture());
+                    yield return new WaitUntil(() => req.done);
+                    if (req.hasError) 
+                    {
+                        textureFrame.Release();
+                        continue;
+                    }
+                }
+                else
+                {
+                    yield return waitForEndOfFrame;
+                    textureFrame.ReadTextureOnCPU(_imageSource.GetCurrentTexture());
+                }
                 
                 // Process Face (Only if NOT in game)
                 if (CurrentState != DetectionState.InGame && _faceLandmarker != null)
@@ -201,10 +250,15 @@ namespace Amapolas.Managers
                                 }
                                 OnHandsUpdated?.Invoke(positions.ToArray());
                             }
+                            else
+                            {
+                                OnHandsUpdated?.Invoke(System.Array.Empty<Vector2>());
+                            }
                         }
                         else
                         {
                             if (_handAnnotationController != null) _handAnnotationController.DrawNow(default);
+                            OnHandsUpdated?.Invoke(System.Array.Empty<Vector2>());
                         }
                     }
                 }

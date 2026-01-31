@@ -52,6 +52,7 @@ namespace Amapolas.Utils
             rb.isKinematic = true;
             cubePrefab.GetComponent<BoxCollider>().isTrigger = true;
             cubePrefab.tag = "Knife";
+            cubePrefab.GetComponent<Renderer>().sharedMaterial.color = Color.red;
             
             // Save as asset if possible or just keep in scene
             gameplay.knifePrefab = cubePrefab;
@@ -63,6 +64,15 @@ namespace Amapolas.Utils
             col.size = new Vector3(1f, 2f, 0.5f);
             col.isTrigger = true;
             playerHitbox.tag = "Player";
+
+            // 5b. Create Amapola Prefab (Pink Sphere)
+            GameObject amapolaPlaceholder = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            amapolaPlaceholder.name = "AmapolaPlaceholder";
+            amapolaPlaceholder.transform.localScale = Vector3.one * 0.3f;
+            amapolaPlaceholder.GetComponent<Renderer>().sharedMaterial.color = Color.green;
+            amapolaPlaceholder.GetComponent<SphereCollider>().isTrigger = true;
+            amapolaPlaceholder.tag = "Untagged"; // It's not a knife, but projectile handles it
+            gameplay.amapolaPrefab = amapolaPlaceholder;
 
             // 6. Support for Hand Shields
             GameObject shieldTemplate = CreateShield(new Vector3(0, -10, 0), "Shield_Template");
@@ -92,6 +102,42 @@ namespace Amapolas.Utils
             var gui = managersGO.GetComponent<Managers.GameUI>();
             gui.messagePanel = panel;
             gui.statusText = tmp;
+
+            // 7b. UI Health Slider
+            GameObject sliderGO = new GameObject("HealthSlider", typeof(RectTransform), typeof(Slider));
+            sliderGO.transform.SetParent(canvasGO.transform, false);
+            var sliderRT = sliderGO.GetComponent<RectTransform>();
+            sliderRT.anchorMin = new Vector2(0.5f, 0);
+            sliderRT.anchorMax = new Vector2(0.5f, 0);
+            sliderRT.pivot = new Vector2(0.5f, 0);
+            sliderRT.anchoredPosition = new Vector2(0, 50);
+            sliderRT.sizeDelta = new Vector2(300, 20);
+
+            var slider = sliderGO.GetComponent<Slider>();
+            
+            // Create background and fill for the slider (simplified)
+            GameObject bg = new GameObject("Background", typeof(Image));
+            bg.transform.SetParent(sliderGO.transform, false);
+            bg.GetComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+            bg.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 0);
+            bg.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+            bg.GetComponent<RectTransform>().anchorMax = Vector2.one;
+
+            GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+            fillArea.transform.SetParent(sliderGO.transform, false);
+            fillArea.GetComponent<RectTransform>().sizeDelta = new Vector2(-10, -4);
+            fillArea.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+            fillArea.GetComponent<RectTransform>().anchorMax = Vector2.one;
+
+            GameObject fill = new GameObject("Fill", typeof(Image));
+            fill.transform.SetParent(fillArea.transform, false);
+            fill.GetComponent<Image>().color = Color.green;
+            fill.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+
+            slider.fillRect = fill.GetComponent<RectTransform>();
+            slider.targetGraphic = fill.GetComponent<Image>();
+            
+            gui.healthSlider = slider;
 
             // 8. Setup Feedback Overlays
             gui.hitOverlay = CreateOverlay(canvasGO.transform, "HitOverlay", new Color(1, 0, 0, 0));

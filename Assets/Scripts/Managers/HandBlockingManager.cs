@@ -6,13 +6,28 @@ namespace Amapolas.Gameplay
 {
     public class HandBlockingManager : MonoBehaviour
     {
-        [Header("Shield Settings")]
-        public GameObject shieldPrefab; // Reference to a prefab with Shield tag and HandShield script
-        public float shieldDistance = 2f;
-        public float smoothness = 10f;
+        public static HandBlockingManager Instance { get; private set; }
+
+        [Header("Shield System Settings")]
+        public GameObject shieldPrefab; // Reference to the big shield prefab
+        public float blockHeightThreshold = 0.4f; // Normalized Y (0-1). > 0.4 means hands are "up"
+        public float shieldDistance = 0.8f; // Closer to avoid central obstruction
+        
+        [Header("Visuals (Auto-applied if no prefab)")]
+        [Range(0f, 1f)] public float shieldOpacity = 0.02f; 
+        public Color shieldColor = new Color(0, 0.5f, 1f);
+
+        public bool IsBlocking { get; private set; } = false;
 
         private Camera _mainCamera;
-        private List<GameObject> _activeShields = new List<GameObject>();
+        private GameObject _globalShield;
+        private HandShield _handShieldComponent;
+
+        private void Awake()
+        {
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
+        }
 
         private void Start()
         {
@@ -20,67 +35,109 @@ namespace Amapolas.Gameplay
 
             if (DetectionManager.Instance != null)
             {
-                DetectionManager.Instance.OnHandsUpdated += UpdateShields;
+                DetectionManager.Instance.OnHandsUpdated += UpdateBlockingState;
+            }
+            
+            CreateGlobalShield();
+        }
+
+        private void Update()
+        {
+            if (_globalShield != null && _mainCamera != null)
+            {
+                // Ensure the shield follows the camera
+                _globalShield.transform.position = _mainCamera.transform.position + _mainCamera.transform.forward * shieldDistance;
+                _globalShield.transform.rotation = _mainCamera.transform.rotation;
+
+                // Sync visuals if using the auto-generated shield
+                var renderer = _globalShield.GetComponent<Renderer>();
+                if (renderer != null && renderer.material != null)
+                {
+                    renderer.enabled = IsBlocking && (shieldOpacity > 0.01f);
+                    Color c = renderer.material.color;
+                    c.a = shieldOpacity;
+                    renderer.material.color = c;
+                }
             }
         }
 
-        private void UpdateShields(Vector2[] handPositions)
+        private void UpdateBlockingState(Vector2[] handPositions)
         {
-            // Manage shield count
-            while (_activeShields.Count < handPositions.Length)
+            bool anyHandDetected = handPositions != null && handPositions.Length > 0;
+            bool anyHandBlocking = false;
+
+            if (anyHandDetected)
             {
-                CreateShield();
-            }
-            while (_activeShields.Count > handPositions.Length)
-            {
-                var shield = _activeShields[_activeShields.Count - 1];
-                _activeShields.RemoveAt(_activeShields.Count - 1);
-                Destroy(shield);
+                foreach (var pos in handPositions)
+                {
+                    // MediaPipe Y is 0 at top, 1 at bottom. 
+                    // Threshold is distance from bottom. 
+                    // Example: threshold 0.4 means blocking if Y is in top 60% (Y < 0.6)
+                    float triggerY = 1f - blockHeightThreshold;
+                    if (pos.y < triggerY) 
+                    {
+                        anyHandBlocking = true;
+                        break;
+                    }
+                }
             }
 
-            // Update positions
-            for (int i = 0; i < handPositions.Length; i++)
+            // IsBlocking update follows logic...
+            IsBlocking = anyHandBlocking;
+
+            if (_globalShield != null)
             {
-                UpdateShieldPosition(_activeShields[i], handPositions[i]);
+                _globalShield.SetActive(IsBlocking);
             }
         }
 
-        private void CreateShield()
+        private void CreateGlobalShield()
         {
-            GameObject shield = null;
             if (shieldPrefab != null)
             {
-                shield = Instantiate(shieldPrefab, transform);
+                _globalShield = Instantiate(shieldPrefab, transform);
             }
             else
             {
-                // Fallback shield
-                shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                shield.name = "HandShield_Fallback";
-                shield.transform.localScale = new Vector3(0.5f, 0.5f, 0.1f);
-                shield.tag = "Shield";
-                var collider = shield.GetComponent<Collider>();
+                // Fallback: A big invisible (but trigger) plane or sphere
+                _globalShield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                _globalShield.name = "GlobalBlockingShield";
+                _globalShield.transform.SetParent(transform);
+                _globalShield.transform.localScale = new Vector3(8f, 8f, 1f); // Much larger and thicker
+                _globalShield.tag = "Shield";
+                
+                var collider = _globalShield.GetComponent<Collider>();
                 collider.isTrigger = true;
-                shield.AddComponent<HandShield>();
+                
+                var renderer = _globalShield.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    // Create a dedicated material to ensure transparency works
+                    // Try "Standard" first; if URP is used, you might need to change this in Inspector
+                    Material transMat = new Material(Shader.Find("Standard"));
+                    if (transMat.shader != null)
+                    {
+                        transMat.SetFloat("_Mode", 3); // Transparent mode
+                        transMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                        transMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                        transMat.SetInt("_ZWrite", 0);
+                        transMat.EnableKeyword("_ALPHABLEND_ON");
+                        transMat.renderQueue = 3000;
+                        transMat.color = new Color(shieldColor.r, shieldColor.g, shieldColor.b, shieldOpacity);
+                        renderer.material = transMat;
+                    }
+                }
+
+                _globalShield.AddComponent<HandShield>();
             }
 
-            var handShield = shield.GetComponent<HandShield>();
-            if (handShield != null)
+            _handShieldComponent = _globalShield.GetComponent<HandShield>();
+            if (_handShieldComponent != null)
             {
-                handShield.OnKnifeBlocked += HandleBlock;
+                _handShieldComponent.OnKnifeBlocked += HandleBlock;
             }
 
-            _activeShields.Add(shield);
-        }
-
-        private void UpdateShieldPosition(GameObject shield, Vector2 normalizedPos)
-        {
-            // Convert normalized MediaPipe coordinates (0-1) to camera view space
-            // NOTE: Flip X to fix mirroring. Map Y directly to fix vertical inversion.
-            Vector3 screenPos = new Vector3((1f - normalizedPos.x) * Screen.width, normalizedPos.y * Screen.height, shieldDistance);
-            Vector3 targetWorldPos = _mainCamera.ScreenToWorldPoint(screenPos);
-
-            shield.transform.position = Vector3.Lerp(shield.transform.position, targetWorldPos, Time.deltaTime * smoothness);
+            _globalShield.SetActive(false);
         }
 
         private void HandleBlock()
@@ -95,7 +152,7 @@ namespace Amapolas.Gameplay
         {
             if (DetectionManager.Instance != null)
             {
-                DetectionManager.Instance.OnHandsUpdated -= UpdateShields;
+                DetectionManager.Instance.OnHandsUpdated -= UpdateBlockingState;
             }
         }
     }
