@@ -1,4 +1,3 @@
-#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using TMPro;
@@ -9,7 +8,7 @@ using Mediapipe.Unity.Sample;
 
 namespace Amapolas.Utils
 {
-    public static class SceneInitializer
+    public class SceneInitializer : MonoBehaviour
     {
         [MenuItem("Amapolas/Setup Initial Scene")]
         public static void SetupScene()
@@ -65,20 +64,12 @@ namespace Amapolas.Utils
             col.isTrigger = true;
             playerHitbox.tag = "Player";
 
-            // 6. Support for Hand Shields (Sector Based)
+            // 6. Support for Hand Shields
+            GameObject shieldTemplate = CreateShield(new Vector3(0, -10, 0), "Shield_Template");
             var blockingManager = managersGO.GetComponent<Gameplay.HandBlockingManager>();
-            blockingManager.sectorShields = new GameObject[4];
+            blockingManager.shieldPrefab = shieldTemplate;
             
-            float spread = 0.5f;
-            float distance = 1.2f;
-            
-            // Order: TL, TR, BL, BR
-            blockingManager.sectorShields[0] = CreateShield(new Vector3(-spread, 1.6f + spread, distance), "Shield_TL");
-            blockingManager.sectorShields[1] = CreateShield(new Vector3(spread, 1.6f + spread, distance), "Shield_TR");
-            blockingManager.sectorShields[2] = CreateShield(new Vector3(-spread, 1.6f - spread, distance), "Shield_BL");
-            blockingManager.sectorShields[3] = CreateShield(new Vector3(spread, 1.6f - spread, distance), "Shield_BR");
-
-            foreach(var s in blockingManager.sectorShields) s.SetActive(false);
+            // Note: We don't need static shields anymore as they are spawned by manager
 
             // 7. Corridor Blocking Setup
             CreateCorridorBlocking();
@@ -152,14 +143,14 @@ namespace Amapolas.Utils
             GameObject shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             shield.name = name;
             shield.transform.position = pos;
-            shield.transform.localScale = new Vector3(0.8f, 0.8f, 0.1f);
+            shield.transform.localScale = Vector3.one * 0.4f;
             shield.tag = "Shield";
             shield.GetComponent<SphereCollider>().isTrigger = true;
             shield.AddComponent<Gameplay.HandShield>();
             
             // Add a visual material if possible, or just color it
             var renderer = shield.GetComponent<Renderer>();
-            renderer.sharedMaterial.color = new Color(0, 0.8f, 1f, 0.4f);
+            renderer.sharedMaterial.color = new Color(0, 0.8f, 1f, 0.5f);
             
             return shield;
         }
@@ -312,7 +303,9 @@ namespace Amapolas.Utils
             var soDet = new SerializedObject(detManager);
             soDet.FindProperty("_screen").objectReferenceValue = screen;
             soDet.ApplyModifiedProperties();
+            
+            // Note: We'll need a way in DetectionManager to find or reference annoController
+            // For now, we'll let it find it in Start/Awake
         }
     }
 }
-#endif
