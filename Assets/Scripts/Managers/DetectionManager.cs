@@ -126,8 +126,14 @@ namespace Amapolas.Managers
             string handModelPath = "hand_landmarker.bytes";
             yield return AssetLoader.PrepareAssetAsync(handModelPath);
             
+            // Recomended: Use GPU delegate for performance in Build
+            var delegateType = Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU;
+#if !UNITY_EDITOR
+            delegateType = Mediapipe.Tasks.Core.BaseOptions.Delegate.GPU;
+#endif
+
             var options = new HandLandmarkerOptions(
-                new Mediapipe.Tasks.Core.BaseOptions(Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU, modelAssetPath: handModelPath),
+                new Mediapipe.Tasks.Core.BaseOptions(delegateType, modelAssetPath: handModelPath),
                 runningMode: Mediapipe.Tasks.Vision.Core.RunningMode.IMAGE,
                 numHands: 2
             );
@@ -152,22 +158,29 @@ namespace Amapolas.Managers
                 yield return waitForEndOfFrame;
                 textureFrame.ReadTextureOnCPU(_imageSource.GetCurrentTexture());
                 
-                // Process Face
-                using (var faceImage = textureFrame.BuildCPUImage())
+                // Process Face (Only if NOT in game)
+                if (CurrentState != DetectionState.InGame && _faceLandmarker != null)
                 {
-                    if (_faceLandmarker.TryDetect(faceImage, null, ref result))
+                    using (var faceImage = textureFrame.BuildCPUImage())
                     {
-                        _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
-                        if (_annotationController != null) _annotationController.DrawNow(result);
-                    }
-                    else
-                    {
-                        _isFaceDetectedReal = false;
-                        if (_annotationController != null) _annotationController.DrawNow(default);
+                        if (_faceLandmarker.TryDetect(faceImage, null, ref result))
+                        {
+                            _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
+                            if (_annotationController != null) _annotationController.DrawNow(result);
+                        }
+                        else
+                        {
+                            _isFaceDetectedReal = false;
+                            if (_annotationController != null) _annotationController.DrawNow(default);
+                        }
                     }
                 }
+                else
+                {
+                    if (_annotationController != null) _annotationController.DrawNow(default);
+                }
 
-                // Process Hands if in Game
+                // Process Hands (Only if in Game)
                 if (CurrentState == DetectionState.InGame && _handLandmarker != null)
                 {
                     using (var handImage = textureFrame.BuildCPUImage())
