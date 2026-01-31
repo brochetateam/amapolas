@@ -88,7 +88,7 @@ namespace Amapolas.Utils
             gui.messagePanel = panel;
             gui.statusText = tmp;
 
-            Debug.Log("Scene Setup Complete! Use 'F' to simulate face, then 'M' to start game.");
+            Debug.Log("Scene Setup Complete! Use the Amapolas menu to re-init if needed.");
         }
 
         private static void RegisterTags()
@@ -173,7 +173,6 @@ namespace Amapolas.Utils
             AppSettings settings = AssetDatabase.LoadAssetAtPath<AppSettings>("Assets/MediaPipeUnity/Samples/Scenes/AppSettings.asset");
             if (settings != null)
             {
-                // Assign via SerializedObject to private field if necessary, or just rely on manual link if possible
                 var so = new SerializedObject(bootstrap);
                 so.FindProperty("_appSettings").objectReferenceValue = settings;
                 so.ApplyModifiedProperties();
@@ -231,7 +230,7 @@ namespace Amapolas.Utils
             var multiAnno = faceAnnotationGO.GetComponent<MultiFaceLandmarkListAnnotation>();
             var annoController = faceAnnotationGO.GetComponent<FaceLandmarkerResultAnnotationController>();
             
-            // Link Prefab to MultiAnnotation (private field _annotationPrefab in ListAnnotation)
+            // Link Prefab to MultiAnnotation
             GameObject annoPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.github.homuler.mediapipe/PackageResources/Prefabs/FaceLandmarkListWithIris Annotation.prefab");
             if (annoPrefab != null)
             {
@@ -240,7 +239,7 @@ namespace Amapolas.Utils
                 soMulti.ApplyModifiedProperties();
             }
 
-            // Link Annotation to Controller (both private fields)
+            // Link Annotation to Controller
             var soAnnoCtrl = new SerializedObject(annoController);
             soAnnoCtrl.FindProperty("_annotation").objectReferenceValue = multiAnno;
             soAnnoCtrl.ApplyModifiedProperties();
@@ -249,9 +248,6 @@ namespace Amapolas.Utils
             var soDet = new SerializedObject(detManager);
             soDet.FindProperty("_screen").objectReferenceValue = screen;
             soDet.ApplyModifiedProperties();
-            
-            // Note: We'll need a way in DetectionManager to find or reference annoController
-            // For now, we'll let it find it in Start/Awake
         }
     }
 }
