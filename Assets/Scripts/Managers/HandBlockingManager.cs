@@ -76,8 +76,8 @@ namespace Amapolas.Gameplay
         private void UpdateShieldPosition(GameObject shield, Vector2 normalizedPos)
         {
             // Convert normalized MediaPipe coordinates (0-1) to camera view space
-            // MediaPipe typically has (0,0) at top-left. Screen space is (0,0) bottom-left.
-            Vector3 screenPos = new Vector3(normalizedPos.x * Screen.width, (1f - normalizedPos.y) * Screen.height, shieldDistance);
+            // NOTE: Flip X to fix mirroring (MediaPipe x=0 is left of image, but webcam is usually mirrored for user)
+            Vector3 screenPos = new Vector3((1f - normalizedPos.x) * Screen.width, (1f - normalizedPos.y) * Screen.height, shieldDistance);
             Vector3 targetWorldPos = _mainCamera.ScreenToWorldPoint(screenPos);
 
             shield.transform.position = Vector3.Lerp(shield.transform.position, targetWorldPos, Time.deltaTime * smoothness);

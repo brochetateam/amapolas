@@ -120,7 +120,7 @@ namespace Amapolas.Utils
             SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
             SerializedProperty tagsProp = tagManager.FindProperty("tags");
 
-            string[] neededTags = { "Shield", "Player" };
+            string[] neededTags = { "Shield", "Player", "Knife" };
             foreach (string tag in neededTags)
             {
                 bool exists = false;
