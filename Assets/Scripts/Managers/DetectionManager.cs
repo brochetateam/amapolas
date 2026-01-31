@@ -139,6 +139,7 @@ namespace Amapolas.Managers
         {
             var waitForEndOfFrame = new WaitForEndOfFrame();
             var result = FaceLandmarkerResult.Alloc(1);
+            var handResult = HandLandmarkerResult.Alloc(2);
 
             while (_faceLandmarker != null)
             {
@@ -150,43 +151,48 @@ namespace Amapolas.Managers
 
                 yield return waitForEndOfFrame;
                 textureFrame.ReadTextureOnCPU(_imageSource.GetCurrentTexture());
-                var image = textureFrame.BuildCPUImage();
                 
-                if (_faceLandmarker.TryDetect(image, null, ref result))
+                // Process Face
+                using (var faceImage = textureFrame.BuildCPUImage())
                 {
-                    _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
-                    if (_annotationController != null) _annotationController.DrawNow(result);
-                }
-                else
-                {
-                    _isFaceDetectedReal = false;
-                    if (_annotationController != null) _annotationController.DrawNow(default);
+                    if (_faceLandmarker.TryDetect(faceImage, null, ref result))
+                    {
+                        _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
+                        if (_annotationController != null) _annotationController.DrawNow(result);
+                    }
+                    else
+                    {
+                        _isFaceDetectedReal = false;
+                        if (_annotationController != null) _annotationController.DrawNow(default);
+                    }
                 }
 
                 // Process Hands if in Game
                 if (CurrentState == DetectionState.InGame && _handLandmarker != null)
                 {
-                    var handResult = HandLandmarkerResult.Alloc(2);
-                    if (_handLandmarker.TryDetect(image, null, ref handResult))
+                    using (var handImage = textureFrame.BuildCPUImage())
                     {
-                        if (_handAnnotationController != null) _handAnnotationController.DrawNow(handResult);
-                        
-                        // Emit hand data for the blocking manager
-                        if (handResult.handLandmarks != null && handResult.handLandmarks.Count > 0)
+                        if (_handLandmarker.TryDetect(handImage, null, ref handResult))
                         {
-                            List<Vector2> positions = new List<Vector2>();
-                            foreach (var hand in handResult.handLandmarks)
+                            if (_handAnnotationController != null) _handAnnotationController.DrawNow(handResult);
+                            
+                            // Emit hand data for the blocking manager
+                            if (handResult.handLandmarks != null && handResult.handLandmarks.Count > 0)
                             {
-                                // Using index finger tip (8) as representative position
-                                var tip = hand.landmarks[8];
-                                positions.Add(new Vector2(tip.x, tip.y));
+                                List<Vector2> positions = new List<Vector2>();
+                                foreach (var hand in handResult.handLandmarks)
+                                {
+                                    // Using index finger tip (8) as representative position
+                                    var tip = hand.landmarks[8];
+                                    positions.Add(new Vector2(tip.x, tip.y));
+                                }
+                                OnHandsUpdated?.Invoke(positions.ToArray());
                             }
-                            OnHandsUpdated?.Invoke(positions.ToArray());
                         }
-                    }
-                    else
-                    {
-                        if (_handAnnotationController != null) _handAnnotationController.DrawNow(default);
+                        else
+                        {
+                            if (_handAnnotationController != null) _handAnnotationController.DrawNow(default);
+                        }
                     }
                 }
 

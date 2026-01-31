@@ -64,8 +64,11 @@ namespace Amapolas.Utils
             playerHitbox.tag = "Player";
 
             // 6. Support for Hand Shields
-            CreateShield(new Vector3(-0.5f, 1.6f, 1f), "LeftHandShield");
-            CreateShield(new Vector3(0.5f, 1.6f, 1f), "RightHandShield");
+            GameObject shieldTemplate = CreateShield(new Vector3(0, -10, 0), "Shield_Template");
+            var blockingManager = managersGO.GetComponent<Gameplay.HandBlockingManager>();
+            blockingManager.shieldPrefab = shieldTemplate;
+            
+            // Note: We don't need static shields anymore as they are spawned by manager
 
             // 7. Corridor Blocking Setup
             CreateCorridorBlocking();
@@ -134,14 +137,21 @@ namespace Amapolas.Utils
             tagManager.ApplyModifiedProperties();
         }
 
-        private static void CreateShield(Vector3 pos, string name)
+        private static GameObject CreateShield(Vector3 pos, string name)
         {
             GameObject shield = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             shield.name = name;
             shield.transform.position = pos;
-            shield.transform.localScale = Vector3.one * 0.3f;
+            shield.transform.localScale = Vector3.one * 0.4f;
             shield.tag = "Shield";
             shield.GetComponent<SphereCollider>().isTrigger = true;
+            shield.AddComponent<Gameplay.HandShield>();
+            
+            // Add a visual material if possible, or just color it
+            var renderer = shield.GetComponent<Renderer>();
+            renderer.material.color = new Color(0, 0.8f, 1f, 0.5f);
+            
+            return shield;
         }
 
         private static void CreateCorridorBlocking()
