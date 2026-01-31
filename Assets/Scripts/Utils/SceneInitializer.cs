@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEditor;
+using TMPro;
+using UnityEngine.UI;
 
 namespace Amapolas.Utils
 {
