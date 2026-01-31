@@ -51,6 +51,7 @@ namespace Amapolas.Utils
             var rb = cubePrefab.AddComponent<Rigidbody>();
             rb.isKinematic = true;
             cubePrefab.GetComponent<BoxCollider>().isTrigger = true;
+            cubePrefab.tag = "Knife";
             
             // Save as asset if possible or just keep in scene
             gameplay.knifePrefab = cubePrefab;
