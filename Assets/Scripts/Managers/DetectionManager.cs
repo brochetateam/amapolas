@@ -39,6 +39,7 @@ namespace Amapolas.Managers
         
         private ImageSource _imageSource;
         private FaceLandmarker _faceLandmarker;
+        private FaceLandmarkerResultAnnotationController _annotationController;
         private Mediapipe.Unity.Experimental.TextureFramePool _textureFramePool;
         private bool faceSeenOnce = false;
         private bool _isFaceDetectedReal = false;
@@ -78,6 +79,13 @@ namespace Amapolas.Managers
                 if (_imageSource.isPrepared && _screen != null)
                 {
                     _screen.Initialize(_imageSource);
+                }
+
+                // Find Annotation Controller
+                _annotationController = FindFirstObjectByType<FaceLandmarkerResultAnnotationController>();
+                if (_annotationController != null)
+                {
+                    _annotationController.imageSize = new Vector2Int(_imageSource.textureWidth, _imageSource.textureHeight);
                 }
 
                 // Initialize FaceLandmarker
@@ -122,10 +130,12 @@ namespace Amapolas.Managers
                 if (_faceLandmarker.TryDetect(image, null, ref result))
                 {
                     _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
+                    if (_annotationController != null) _annotationController.DrawNow(result);
                 }
                 else
                 {
                     _isFaceDetectedReal = false;
+                    if (_annotationController != null) _annotationController.DrawNow(default);
                 }
 
                 textureFrame.Release();
