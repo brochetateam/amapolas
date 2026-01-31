@@ -102,19 +102,25 @@ namespace Amapolas.Managers
             
             var options = new FaceLandmarkerOptions(
                 new Mediapipe.Tasks.Core.BaseOptions(Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU, modelAssetPath: modelPath),
-                runningMode: Mediapipe.Tasks.Vision.Core.RunningMode.IMAGE,
-                numFaces: 1
+                runningMode: Mediapipe.Tasks.Vision.Core.RunningMode.LIVE_STREAM,
+                numFaces: 1,
+                resultCallback: OnFaceLandmarkDetectionOutput
             );
             
             _faceLandmarker = FaceLandmarker.CreateFromOptions(options);
             _textureFramePool = new Mediapipe.Unity.Experimental.TextureFramePool(_imageSource.textureWidth, _imageSource.textureHeight, TextureFormat.RGBA32, 5);
         }
 
+        private void OnFaceLandmarkDetectionOutput(FaceLandmarkerResult result, Image image, long timestamp)
+        {
+            _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
+            if (_annotationController != null) _annotationController.DrawLater(result);
+        }
+
         private IEnumerator ProcessFrames()
         {
             var waitForEndOfFrame = new WaitForEndOfFrame();
-            var result = FaceLandmarkerResult.Alloc(1);
-
+            
             while (_faceLandmarker != null)
             {
                 if (!_textureFramePool.TryGetTextureFrame(out var textureFrame))
@@ -123,23 +129,27 @@ namespace Amapolas.Managers
                     continue;
                 }
 
-                yield return waitForEndOfFrame;
-                textureFrame.ReadTextureOnCPU(_imageSource.GetCurrentTexture());
-                var image = textureFrame.BuildCPUImage();
+                // Async read from GPU to CPU
+                var transformationOptions = _imageSource.GetTransformationOptions();
+                var req = textureFrame.ReadTextureAsync(_imageSource.GetCurrentTexture(), transformationOptions.flipHorizontally, transformationOptions.flipVertically);
                 
-                if (_faceLandmarker.TryDetect(image, null, ref result))
+                yield return new WaitUntil(() => req.done);
+
+                if (req.hasError)
                 {
-                    _isFaceDetectedReal = (result.faceLandmarks != null && result.faceLandmarks.Count > 0);
-                    if (_annotationController != null) _annotationController.DrawNow(result);
-                }
-                else
-                {
-                    _isFaceDetectedReal = false;
-                    if (_annotationController != null) _annotationController.DrawNow(default);
+                    textureFrame.Release();
+                    yield return null;
+                    continue;
                 }
 
+                var image = textureFrame.BuildCPUImage();
+                var timestamp = (long)(Time.realtimeSinceStartup * 1000);
+                var imageProcessingOptions = new Mediapipe.Tasks.Vision.Core.ImageProcessingOptions(rotationDegrees: (int)transformationOptions.rotationAngle);
+
+                _faceLandmarker.DetectAsync(image, timestamp, imageProcessingOptions);
+                
                 textureFrame.Release();
-                yield return new WaitForSeconds(0.1f); // Reduce CPU load
+                yield return null; // Run as fast as possible or controlled by frame rate
             }
         }
 
