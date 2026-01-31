@@ -22,6 +22,7 @@ namespace Amapolas.Utils
             GameObject managersGO = new GameObject("Systems");
             managersGO.AddComponent<Managers.DetectionManager>();
             managersGO.AddComponent<Gameplay.GameplayManager>();
+            managersGO.AddComponent<Gameplay.HandBlockingManager>();
             managersGO.AddComponent<Managers.GameUI>();
 
             // 2. Create Camera Setup
@@ -88,7 +89,26 @@ namespace Amapolas.Utils
             gui.messagePanel = panel;
             gui.statusText = tmp;
 
+            // 8. Setup Feedback Overlays
+            gui.hitOverlay = CreateOverlay(canvasGO.transform, "HitOverlay", new Color(1, 0, 0, 0));
+            gui.blockOverlay = CreateOverlay(canvasGO.transform, "BlockOverlay", new Color(0, 1, 0, 0));
+
             Debug.Log("Scene Setup Complete! Use 'F' to simulate face, then 'M' to start game.");
+        }
+
+        private static Image CreateOverlay(Transform parent, string name, Color color)
+        {
+            GameObject overlayGO = new GameObject(name, typeof(Image));
+            overlayGO.transform.SetParent(parent, false);
+            var rect = overlayGO.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.sizeDelta = Vector2.zero;
+            
+            var img = overlayGO.GetComponent<Image>();
+            img.color = color;
+            overlayGO.SetActive(false);
+            return img;
         }
 
         private static void RegisterTags()
@@ -244,6 +264,29 @@ namespace Amapolas.Utils
             var soAnnoCtrl = new SerializedObject(annoController);
             soAnnoCtrl.FindProperty("_annotation").objectReferenceValue = multiAnno;
             soAnnoCtrl.ApplyModifiedProperties();
+
+            // 5. Hand Annotations
+            GameObject handAnnotationGO = new GameObject("Hand Annotation", typeof(RectTransform), typeof(MultiHandLandmarkListAnnotation), typeof(HandLandmarkerResultAnnotationController));
+            handAnnotationGO.transform.SetParent(screenGO.transform, false);
+            var handAnnoRT = handAnnotationGO.GetComponent<RectTransform>();
+            handAnnoRT.anchorMin = Vector2.zero;
+            handAnnoRT.anchorMax = Vector2.one;
+            handAnnoRT.sizeDelta = Vector2.zero;
+
+            var handMultiAnno = handAnnotationGO.GetComponent<MultiHandLandmarkListAnnotation>();
+            var handAnnoController = handAnnotationGO.GetComponent<HandLandmarkerResultAnnotationController>();
+
+            GameObject handAnnoPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.github.homuler.mediapipe/PackageResources/Prefabs/Multi HandLandmarkList Annotation.prefab");
+            if (handAnnoPrefab != null)
+            {
+                var soHandMulti = new SerializedObject(handMultiAnno);
+                soHandMulti.FindProperty("_annotationPrefab").objectReferenceValue = handAnnoPrefab;
+                soHandMulti.ApplyModifiedProperties();
+            }
+
+            var soHandAnnoCtrl = new SerializedObject(handAnnoController);
+            soHandAnnoCtrl.FindProperty("_annotation").objectReferenceValue = handMultiAnno;
+            soHandAnnoCtrl.ApplyModifiedProperties();
 
             // Assign to detection manager
             var soDet = new SerializedObject(detManager);

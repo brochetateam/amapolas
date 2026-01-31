@@ -12,6 +12,8 @@ namespace Amapolas.Managers
         [Header("UI Elements")]
         public GameObject messagePanel;
         public TextMeshProUGUI statusText;
+        public Image hitOverlay;
+        public Image blockOverlay;
 
         private void Awake()
         {
@@ -54,6 +56,31 @@ namespace Amapolas.Managers
         public void HideMessages()
         {
             if (messagePanel != null) messagePanel.SetActive(false);
+        }
+
+        public void TriggerHitFeedback()
+        {
+            if (hitOverlay != null) StartCoroutine(FlashOverlay(hitOverlay, Color.red));
+        }
+
+        public void TriggerBlockFeedback()
+        {
+            if (blockOverlay != null) StartCoroutine(FlashOverlay(blockOverlay, Color.green));
+        }
+
+        IEnumerator FlashOverlay(Image img, Color color)
+        {
+            img.color = new Color(color.r, color.g, color.b, 0.5f);
+            img.gameObject.SetActive(true);
+            float duration = 0.2f;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                img.color = new Color(color.r, color.g, color.b, Mathf.Lerp(0.5f, 0f, elapsed / duration));
+                yield return null;
+            }
+            img.gameObject.SetActive(false);
         }
 
         IEnumerator BlinkEffect()

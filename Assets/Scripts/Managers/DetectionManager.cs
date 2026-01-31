@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 using Mediapipe.Unity;
 using Mediapipe.Unity.Sample;
 using Mediapipe.Tasks.Vision.FaceLandmarker;
+using Mediapipe.Tasks.Vision.HandLandmarker;
 using System.Collections;
 using System.Collections.Generic;
 using System;
@@ -39,7 +40,9 @@ namespace Amapolas.Managers
         
         private ImageSource _imageSource;
         private FaceLandmarker _faceLandmarker;
+        private HandLandmarker _handLandmarker;
         private FaceLandmarkerResultAnnotationController _annotationController;
+        private HandLandmarkerResultAnnotationController _handAnnotationController;
         private Mediapipe.Unity.Experimental.TextureFramePool _textureFramePool;
         private bool faceSeenOnce = false;
         private bool _isFaceDetectedReal = false;
@@ -81,15 +84,23 @@ namespace Amapolas.Managers
                     _screen.Initialize(_imageSource);
                 }
 
-                // Find Annotation Controller
+                // Find Annotation Controllers
                 _annotationController = FindFirstObjectByType<FaceLandmarkerResultAnnotationController>();
+                _handAnnotationController = FindFirstObjectByType<HandLandmarkerResultAnnotationController>();
+                
                 if (_annotationController != null)
                 {
                     _annotationController.imageSize = new Vector2Int(_imageSource.textureWidth, _imageSource.textureHeight);
                 }
 
-                // Initialize FaceLandmarker
+                if (_handAnnotationController != null)
+                {
+                    _handAnnotationController.imageSize = new Vector2Int(_imageSource.textureWidth, _imageSource.textureHeight);
+                }
+
+                // Initialize Landmarkers
                 yield return InitializeFaceLandmarker();
+                yield return InitializeHandLandmarker();
                 
                 // Start Processing Loop
                 StartCoroutine(ProcessFrames());
@@ -108,6 +119,20 @@ namespace Amapolas.Managers
             
             _faceLandmarker = FaceLandmarker.CreateFromOptions(options);
             _textureFramePool = new Mediapipe.Unity.Experimental.TextureFramePool(_imageSource.textureWidth, _imageSource.textureHeight, TextureFormat.RGBA32, 5);
+        }
+        
+        private IEnumerator InitializeHandLandmarker()
+        {
+            string handModelPath = "hand_landmarker.bytes";
+            yield return AssetLoader.PrepareAssetAsync(handModelPath);
+            
+            var options = new HandLandmarkerOptions(
+                new Mediapipe.Tasks.Core.BaseOptions(Mediapipe.Tasks.Core.BaseOptions.Delegate.CPU, modelAssetPath: handModelPath),
+                runningMode: Mediapipe.Tasks.Vision.Core.RunningMode.IMAGE,
+                numHands: 2
+            );
+            
+            _handLandmarker = HandLandmarker.CreateFromOptions(options);
         }
 
         private IEnumerator ProcessFrames()
@@ -136,6 +161,33 @@ namespace Amapolas.Managers
                 {
                     _isFaceDetectedReal = false;
                     if (_annotationController != null) _annotationController.DrawNow(default);
+                }
+
+                // Process Hands if in Game
+                if (CurrentState == DetectionState.InGame && _handLandmarker != null)
+                {
+                    var handResult = HandLandmarkerResult.Alloc(2);
+                    if (_handLandmarker.TryDetect(image, null, ref handResult))
+                    {
+                        if (_handAnnotationController != null) _handAnnotationController.DrawNow(handResult);
+                        
+                        // Emit hand data for the blocking manager
+                        if (handResult.handLandmarks != null && handResult.handLandmarks.Count > 0)
+                        {
+                            List<Vector2> positions = new List<Vector2>();
+                            foreach (var hand in handResult.handLandmarks)
+                            {
+                                // Using index finger tip (8) as representative position
+                                var tip = hand.landmarks[8];
+                                positions.Add(new Vector2(tip.x, tip.y));
+                            }
+                            OnHandsUpdated?.Invoke(positions.ToArray());
+                        }
+                    }
+                    else
+                    {
+                        if (_handAnnotationController != null) _handAnnotationController.DrawNow(default);
+                    }
                 }
 
                 textureFrame.Release();
@@ -230,6 +282,7 @@ namespace Amapolas.Managers
         private void OnDestroy()
         {
             _faceLandmarker?.Close();
+            _handLandmarker?.Close();
             _textureFramePool?.Dispose();
         }
 

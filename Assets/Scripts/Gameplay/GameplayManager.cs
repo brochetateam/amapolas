@@ -110,6 +110,7 @@ namespace Amapolas.Gameplay
             else if (other.CompareTag("Player"))
             {
                 Debug.Log("Hit Player!");
+                if (Managers.GameUI.Instance != null) Managers.GameUI.Instance.TriggerHitFeedback();
                 Destroy(gameObject);
             }
         }
