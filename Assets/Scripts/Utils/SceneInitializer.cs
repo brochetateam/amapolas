@@ -15,16 +15,24 @@ namespace Amapolas.Utils
         {
             RegisterTags();
             
-            // 0. Setup MediaPipe Bootstrap
+            // 0. Setup UI Canvas FIRST so others can find it
+            GameObject canvasGO = GameObject.Find("UICanvas");
+            if (canvasGO == null)
+            {
+                canvasGO = new GameObject("UICanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                canvasGO.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            }
+
+            // 1. Setup MediaPipe Bootstrap
             SetupMediaPipe();
 
-            // 1. Create Managers
+            // 2. Create Managers
             GameObject managersGO = new GameObject("Systems");
-            managersGO.AddComponent<Managers.DetectionManager>();
+            var detManager = managersGO.AddComponent<Managers.DetectionManager>();
             managersGO.AddComponent<Gameplay.GameplayManager>();
-            managersGO.AddComponent<Managers.GameUI>();
+            var gui = managersGO.AddComponent<Managers.GameUI>();
 
-            // 2. Create Camera Setup
+            // 3. Create Camera Setup
             GameObject cam = GameObject.FindWithTag("MainCamera");
             if (cam == null)
             {
@@ -33,28 +41,26 @@ namespace Amapolas.Utils
             }
             cam.transform.position = new Vector3(0, 1.6f, 0);
 
-            // 3. Create Knife Spawn Point
+            // 4. Create Knife Spawn Point
             GameObject spawnPoint = new GameObject("KnifeSpawnPoint");
             spawnPoint.transform.position = new Vector3(0, 1.6f, 20f);
             
             var gameplay = managersGO.GetComponent<Gameplay.GameplayManager>();
             gameplay.knifeSpawnPoint = spawnPoint.transform;
 
-            // 4. Create Video Preview (Visual Feedback)
-            SetupCameraPreview(managersGO.GetComponent<Managers.DetectionManager>());
+            // 5. Create Video Preview (Visual Feedback) - Now Canvas exists!
+            SetupCameraPreview(detManager);
 
-            // 5. Create Knife Prefab (Rectangle)
+            // 6. Create Knife Prefab (Rectangle)
             GameObject cubePrefab = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cubePrefab.name = "KnifePlaceholder";
             cubePrefab.transform.localScale = new Vector3(0.1f, 0.1f, 0.5f);
             var rb = cubePrefab.AddComponent<Rigidbody>();
             rb.isKinematic = true;
             cubePrefab.GetComponent<BoxCollider>().isTrigger = true;
-            
-            // Save as asset if possible or just keep in scene
             gameplay.knifePrefab = cubePrefab;
             
-            // 5. Create Player Hitbox
+            // 7. Create Player Hitbox
             GameObject playerHitbox = new GameObject("PlayerHitbox");
             playerHitbox.transform.position = new Vector3(0, 1.6f, 0.5f);
             var col = playerHitbox.AddComponent<BoxCollider>();
@@ -62,17 +68,14 @@ namespace Amapolas.Utils
             col.isTrigger = true;
             playerHitbox.tag = "Player";
 
-            // 6. Support for Hand Shields
+            // 8. Support for Hand Shields
             CreateShield(new Vector3(-0.5f, 1.6f, 1f), "LeftHandShield");
             CreateShield(new Vector3(0.5f, 1.6f, 1f), "RightHandShield");
 
-            // 7. Corridor Blocking Setup
+            // 9. Corridor Blocking Setup
             CreateCorridorBlocking();
 
-            // 7. UI Setup (Minimal)
-            GameObject canvasGO = new GameObject("UICanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvasGO.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            
+            // 10. Status UI Setup
             GameObject panel = new GameObject("MessagePanel", typeof(Image));
             panel.transform.SetParent(canvasGO.transform, false);
             panel.GetComponent<RectTransform>().sizeDelta = new Vector2(400, 100);
@@ -84,11 +87,10 @@ namespace Amapolas.Utils
             tmp.text = "INITIALIZING...";
             tmp.color = Color.red;
 
-            var gui = managersGO.GetComponent<Managers.GameUI>();
             gui.messagePanel = panel;
             gui.statusText = tmp;
 
-            Debug.Log("Scene Setup Complete! Use the Amapolas menu to re-init if needed.");
+            Debug.Log("Scene Setup Complete! UI and Managers ready.");
         }
 
         private static void RegisterTags()
@@ -138,38 +140,31 @@ namespace Amapolas.Utils
             floor.transform.SetParent(tile.transform);
             floor.transform.localScale = new Vector3(5, 0.1f, 10);
             
-            // Left Wall
-            GameObject leftWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            leftWall.name = "LeftWall";
-            leftWall.transform.SetParent(tile.transform);
-            leftWall.transform.position = new Vector3(-2.5f, 2.5f, 0);
-            leftWall.transform.localScale = new Vector3(0.1f, 5, 10);
+            // Walls
+            CreatePrimitiveWall(tile.transform, "LeftWall", new Vector3(-2.5f, 2.5f, 0), new Vector3(0.1f, 5, 10));
+            CreatePrimitiveWall(tile.transform, "RightWall", new Vector3(2.5f, 2.5f, 0), new Vector3(0.1f, 5, 10));
+            CreatePrimitiveWall(tile.transform, "Ceiling", new Vector3(0, 5, 0), new Vector3(5, 0.1f, 10));
 
-            // Right Wall
-            GameObject rightWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rightWall.name = "RightWall";
-            rightWall.transform.SetParent(tile.transform);
-            rightWall.transform.position = new Vector3(2.5f, 2.5f, 0);
-            rightWall.transform.localScale = new Vector3(0.1f, 5, 10);
-
-            // Ceiling
-            GameObject ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ceiling.name = "Ceiling";
-            ceiling.transform.SetParent(tile.transform);
-            ceiling.transform.position = new Vector3(0, 5, 0);
-            ceiling.transform.localScale = new Vector3(5, 0.1f, 10);
-
-            tile.transform.position = new Vector3(0, 0, -100); // Hide template
+            tile.transform.position = new Vector3(0, 0, -100);
             var ic = root.GetComponent<Gameplay.InfiniteCorridor>();
             ic.corridorTilePrefab = tile;
         }
 
+        private static void CreatePrimitiveWall(Transform parent, string name, Vector3 pos, Vector3 scale)
+        {
+            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = name;
+            wall.transform.SetParent(parent);
+            wall.transform.position = pos;
+            wall.transform.localScale = scale;
+        }
+
         private static void SetupMediaPipe()
         {
+            if (FindFirstObjectByType<Bootstrap>()) return;
             GameObject bootstrapGO = new GameObject("MediaPipeBootstrap");
             var bootstrap = bootstrapGO.AddComponent<Bootstrap>();
             
-            // Load AppSettings from the path found earlier
             AppSettings settings = AssetDatabase.LoadAssetAtPath<AppSettings>("Assets/MediaPipeUnity/Samples/Scenes/AppSettings.asset");
             if (settings != null)
             {
@@ -182,7 +177,11 @@ namespace Amapolas.Utils
         private static void SetupCameraPreview(Managers.DetectionManager detManager)
         {
             GameObject canvas = GameObject.Find("UICanvas");
-            if (canvas == null) return;
+            if (canvas == null)
+            {
+                Debug.LogError("UICanvas NOT FOUND in SetupCameraPreview!");
+                return;
+            }
 
             // 1. Container Panel
             GameObject container = new GameObject("Container Panel", typeof(RectTransform), typeof(Image));
@@ -195,15 +194,15 @@ namespace Amapolas.Utils
             containerRT.sizeDelta = new Vector2(340, 200);
             container.GetComponent<Image>().color = new Color(0, 0, 0, 0.5f);
 
-            // 2. Body (Container for Screen)
+            // 2. Body
             GameObject body = new GameObject("Body", typeof(RectTransform));
             body.transform.SetParent(container.transform, false);
             var bodyRT = body.GetComponent<RectTransform>();
             bodyRT.anchorMin = Vector2.zero;
             bodyRT.anchorMax = Vector2.one;
-            bodyRT.sizeDelta = new Vector2(-20, -20); // Padding
+            bodyRT.sizeDelta = new Vector2(-20, -20);
 
-            // 3. Annotable Screen (The image + Annotation Controllers)
+            // 3. Annotable Screen
             GameObject screenGO = new GameObject("Annotable Screen", typeof(RectTransform), typeof(RawImage), typeof(Mediapipe.Unity.Screen));
             screenGO.transform.SetParent(body.transform, false);
             var screenRT = screenGO.GetComponent<RectTransform>();
@@ -230,7 +229,6 @@ namespace Amapolas.Utils
             var multiAnno = faceAnnotationGO.GetComponent<MultiFaceLandmarkListAnnotation>();
             var annoController = faceAnnotationGO.GetComponent<FaceLandmarkerResultAnnotationController>();
             
-            // Link Prefab to MultiAnnotation
             GameObject annoPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/com.github.homuler.mediapipe/PackageResources/Prefabs/FaceLandmarkListWithIris Annotation.prefab");
             if (annoPrefab != null)
             {
@@ -239,12 +237,10 @@ namespace Amapolas.Utils
                 soMulti.ApplyModifiedProperties();
             }
 
-            // Link Annotation to Controller
             var soAnnoCtrl = new SerializedObject(annoController);
             soAnnoCtrl.FindProperty("_annotation").objectReferenceValue = multiAnno;
             soAnnoCtrl.ApplyModifiedProperties();
 
-            // Assign to detection manager
             var soDet = new SerializedObject(detManager);
             soDet.FindProperty("_screen").objectReferenceValue = screen;
             soDet.ApplyModifiedProperties();
