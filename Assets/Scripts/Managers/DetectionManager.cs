@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Mediapipe.Unity;
-using Mediapipe.Unity.Sample;
 using System.Collections;
 using System.Collections.Generic;
 using System;
@@ -22,51 +20,19 @@ namespace Amapolas.Managers
         public DetectionState CurrentState { get; private set; } = DetectionState.WaitingForFace;
 
         public event Action OnFaceDetected;
-        public event Action OnMaskPutOn; 
+        public event Action OnMaskPutOn; // Triggered when face is lost after detection
         public event Action<Vector2[]> OnHandsUpdated;
 
-        [Header("MediaPipe Components")]
-        [SerializeField] private Mediapipe.Unity.Screen _screen;
-        
         [Header("Debug Settings")]
         public bool useWebcam = true;
         [SerializeField] private bool mockFaceDetected = false;
-        
-        private ImageSource _imageSource;
+
         private bool faceSeenOnce = false;
 
         private void Awake()
         {
             if (Instance == null) Instance = this;
             else Destroy(gameObject);
-        }
-
-        private IEnumerator Start()
-        {
-            if (useWebcam)
-            {
-                yield return InitializeWebcam();
-            }
-        }
-
-        private IEnumerator InitializeWebcam()
-        {
-            // Wait for Bootstrap to finish if it exists
-            Bootstrap bootstrap = FindFirstObjectByType<Bootstrap>();
-            if (bootstrap != null)
-            {
-                yield return new WaitUntil(() => bootstrap.isFinished);
-            }
-
-            _imageSource = ImageSourceProvider.ImageSource;
-            if (_imageSource != null)
-            {
-                yield return _imageSource.Play();
-                if (_imageSource.isPrepared && _screen != null)
-                {
-                    _screen.Initialize(_imageSource);
-                }
-            }
         }
 
         private void Update()
@@ -125,13 +91,11 @@ namespace Amapolas.Managers
 
         private bool GetFaceDetectionStatus()
         {
-            if (Keyboard.current != null)
-            {
-                if (Keyboard.current.fKey.wasPressedThisFrame) mockFaceDetected = true;
-                if (Keyboard.current.mKey.wasPressedThisFrame) mockFaceDetected = false;
-            }
+            if (!useWebcam) return mockFaceDetected;
             
-            return mockFaceDetected; 
+            // TODO: Integrar con MediaPipe FaceLandmarker Task
+            // Por ahora devolvemos falso para no romper el flujo
+            return false;
         }
 
         // Method to be called by MediaPipe Hand Task
