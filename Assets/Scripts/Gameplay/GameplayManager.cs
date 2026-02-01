@@ -31,6 +31,7 @@ namespace Amapolas.Gameplay
         private bool _isProjectileActive = false;
         private float _gameStartTime = 0f;
         private bool _hasJumpedAudio = false;
+        private List<Projectile> _activeProjectiles = new List<Projectile>();
 
         private void Awake()
         {
@@ -149,6 +150,23 @@ namespace Amapolas.Gameplay
                 }
             }
 
+            // Shield Abuse Penalty Logic
+            if (HandBlockingManager.Instance != null && HandBlockingManager.Instance.IsBlocking)
+            {
+                bool threatPresent = false;
+                for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
+                {
+                    if (_activeProjectiles[i] == null) { _activeProjectiles.RemoveAt(i); continue; }
+                    if (_activeProjectiles[i].type == ProjectileType.Knife) { threatPresent = true; break; }
+                }
+
+                if (!threatPresent)
+                {
+                    AdjustHealth(-10f * Time.deltaTime); // 10 HP per second penalty
+                    if (Managers.GameUI.Instance != null) Managers.GameUI.Instance.TriggerHitFeedback();
+                }
+            }
+
             // Check if audio finished (if it was playing)
             if (_bgmSource != null && !_bgmSource.isPlaying && _bgmSource.time == 0 && Time.timeSinceLevelLoad > 10f)
             {
@@ -169,7 +187,8 @@ namespace Amapolas.Gameplay
             StopAllCoroutines(); // Stop spawning
             
             // Clean up scene
-            foreach (var p in FindObjectsOfType<Projectile>()) Destroy(p.gameObject);
+            foreach (var p in _activeProjectiles) if (p != null) Destroy(p.gameObject);
+            _activeProjectiles.Clear();
             
             if (Managers.GameUI.Instance != null)
             {
@@ -252,6 +271,7 @@ namespace Amapolas.Gameplay
             Projectile projectile = go.AddComponent<Projectile>();
             projectile.type = spawnAmapola ? ProjectileType.Amapola : ProjectileType.Knife;
             projectile.speed = gameSpeed * 1.5f;
+            _activeProjectiles.Add(projectile);
 
             // Word Logic (Only gameplay words here, story phrases are handled in Update)
             if (Managers.GameUI.Instance != null)
