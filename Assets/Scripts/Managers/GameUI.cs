@@ -16,6 +16,7 @@ namespace Amapolas.Managers
         public Image blockOverlay;
         public Slider healthSlider;
         public TextMeshProUGUI wordText;
+        public TextMeshProUGUI finalMessageText;
 
         private void Awake()
         {
@@ -76,6 +77,47 @@ namespace Amapolas.Managers
             {
                 wordText.gameObject.SetActive(false);
             }
+        }
+
+        public void ShowFinalExperienceMessage(string message)
+        {
+            StartCoroutine(LaunchFinalMessage(message));
+        }
+
+        private IEnumerator LaunchFinalMessage(string message)
+        {
+            if (finalMessageText == null) yield break;
+
+            finalMessageText.text = message;
+            finalMessageText.gameObject.SetActive(true);
+            finalMessageText.transform.localScale = Vector3.one * 0.1f;
+            finalMessageText.alpha = 0f;
+
+            float duration = 5f;
+            float elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                // Scale from 0.1 to 4 (covers screen)
+                finalMessageText.transform.localScale = Vector3.one * Mathf.Lerp(0.1f, 4f, t);
+                // Fade in
+                finalMessageText.alpha = Mathf.Clamp01(t * 2f);
+
+                // Option: also fade hitOverlay to white to create "The Awakening" effect
+                if (hitOverlay != null)
+                {
+                    hitOverlay.gameObject.SetActive(true);
+                    hitOverlay.color = new Color(1, 1, 1, Mathf.Lerp(0, 1, t));
+                }
+
+                yield return null;
+            }
+            
+            // Final hold or logic to stop game completely
+            Debug.Log("Experience Finished.");
         }
 
         public void TriggerHitFeedback()

@@ -154,6 +154,23 @@ namespace Amapolas.Utils
             
             gui.wordText = wordTMP;
 
+            // 7d. Final Completion Message
+            GameObject finalGO = new GameObject("FinalCompletionMessage", typeof(TextMeshProUGUI));
+            finalGO.transform.SetParent(canvasGO.transform, false);
+            var finalTMP = finalGO.GetComponent<TextMeshProUGUI>();
+            finalTMP.alignment = TextAlignmentOptions.Center;
+            finalTMP.fontSize = 80;
+            finalTMP.fontStyle = FontStyles.Bold;
+            finalTMP.text = "";
+            finalTMP.color = new Color(1f, 0.84f, 0f); // gold
+            finalTMP.raycastTarget = false;
+            finalGO.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
+            finalGO.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+            finalGO.GetComponent<RectTransform>().anchorMax = Vector2.one;
+            finalGO.SetActive(false);
+            
+            gui.finalMessageText = finalTMP;
+
             // 8. Setup Feedback Overlays
             gui.hitOverlay = CreateOverlay(canvasGO.transform, "HitOverlay", new Color(1, 0, 0, 0));
             gui.blockOverlay = CreateOverlay(canvasGO.transform, "BlockOverlay", new Color(0, 1, 0, 0));

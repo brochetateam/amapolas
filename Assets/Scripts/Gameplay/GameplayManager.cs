@@ -18,6 +18,11 @@ namespace Amapolas.Gameplay
         public Transform knifeSpawnPoint;
         public float timeBetweenSpawns = 1.5f;
 
+        [Header("Finish Settings")]
+        public string finalMessage = "ERES LIBRE";
+        private AudioSource _bgmSource;
+        private bool _isGameFinished = false;
+
         [Header("Player Stats")]
         public float maxHealth = 100f;
         public float currentHealth;
@@ -40,6 +45,10 @@ namespace Amapolas.Gameplay
             }
             
             UpdateUI();
+
+            // Find the audio source
+            GameObject audioGO = GameObject.Find("Audio Source");
+            if (audioGO != null) _bgmSource = audioGO.GetComponent<AudioSource>();
         }
 
         public void StartGame()
@@ -83,16 +92,47 @@ namespace Amapolas.Gameplay
 
         private void Update()
         {
-            if (isGameActive)
+            if (!isGameActive || _isGameFinished) return;
+
+            // Speed up over time? 
+            gameSpeed += Time.deltaTime * 0.1f;
+
+            // Check if audio finished (if it was playing)
+            if (_bgmSource != null && !_bgmSource.isPlaying && _bgmSource.time == 0 && Time.timeSinceLevelLoad > 10f)
             {
-                // Speed up over time? 
-                gameSpeed += Time.deltaTime * 0.1f;
+                FinishGame();
+            }
+            // Alternative: check time if it's not looping
+            else if (_bgmSource != null && !_bgmSource.loop && _bgmSource.time >= _bgmSource.clip.length - 0.2f)
+            {
+                FinishGame();
+            }
+        }
+
+        private void FinishGame()
+        {
+            if (_isGameFinished) return;
+            _isGameFinished = true;
+            gameSpeed = 0f; // Stop corridor
+            _isProjectileActive = true; 
+            StopAllCoroutines(); // Stop spawning
+            
+            // Clean up scene
+            foreach (var p in FindObjectsOfType<Projectile>()) Destroy(p.gameObject);
+            
+            if (Managers.GameUI.Instance != null)
+            {
+                Managers.GameUI.Instance.ClearWord();
+                Managers.GameUI.Instance.HideMessages();
+                Managers.GameUI.Instance.ShowFinalExperienceMessage(finalMessage);
             }
         }
 
         IEnumerator SpawnProjectilesRoutine()
         {
-            while (isGameActive)
+            yield return new WaitForSeconds(2f); // Initial wait
+            
+            while (isGameActive && !_isGameFinished)
             {
                 // Keep spawning as long as there's no active projectile
                 if (!_isProjectileActive)
