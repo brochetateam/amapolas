@@ -14,13 +14,15 @@ namespace Amapolas.Gameplay
         public float shieldDistance = 1.5f; // Increased buffer to avoid double triggers
         
         [Header("Visuals (Auto-applied if no prefab)")]
-        [Range(0f, 1f)] public float shieldOpacity = 0.02f; 
+        [Range(0f, 1f)] public float shieldOpacity = 0.5f; 
         public Color shieldColor = new Color(0, 0.5f, 1f);
+        public bool showAsHollowCircle = true;
 
         public bool IsBlocking { get; private set; } = false;
 
         private Camera _mainCamera;
         private GameObject _globalShield;
+        private UnityEngine.UI.Image _shieldImage;
         private HandShield _handShieldComponent;
 
         private void Awake()
@@ -50,13 +52,12 @@ namespace Amapolas.Gameplay
                 _globalShield.transform.rotation = _mainCamera.transform.rotation;
 
                 // Sync visuals if using the auto-generated shield
-                var renderer = _globalShield.GetComponent<Renderer>();
-                if (renderer != null && renderer.material != null)
+                if (_shieldImage != null)
                 {
-                    renderer.enabled = IsBlocking && (shieldOpacity > 0.01f);
-                    Color c = renderer.material.color;
-                    c.a = shieldOpacity;
-                    renderer.material.color = c;
+                    _shieldImage.enabled = IsBlocking && (shieldOpacity > 0.01f);
+                    Color c = shieldColor;
+                    c.a = IsBlocking ? shieldOpacity : 0f;
+                    _shieldImage.color = c;
                 }
             }
         }
@@ -99,35 +100,44 @@ namespace Amapolas.Gameplay
             }
             else
             {
-                // Fallback: A big invisible (but trigger) plane or sphere
+                // 1. Create the Physics Controller (Invisible Cube)
                 _globalShield = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                _globalShield.name = "GlobalBlockingShield";
+                _globalShield.name = "GlobalBlockingShield_Physics";
                 _globalShield.transform.SetParent(transform);
-                _globalShield.transform.localScale = new Vector3(8f, 8f, 1f); // Much larger and thicker
+                _globalShield.transform.localScale = new Vector3(8f, 8f, 1f); 
                 _globalShield.tag = "Shield";
                 
                 var collider = _globalShield.GetComponent<Collider>();
                 collider.isTrigger = true;
                 
                 var renderer = _globalShield.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    // Create a dedicated material to ensure transparency works
-                    // Try "Standard" first; if URP is used, you might need to change this in Inspector
-                    Material transMat = new Material(Shader.Find("Standard"));
-                    if (transMat.shader != null)
-                    {
-                        transMat.SetFloat("_Mode", 3); // Transparent mode
-                        transMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                        transMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                        transMat.SetInt("_ZWrite", 0);
-                        transMat.EnableKeyword("_ALPHABLEND_ON");
-                        transMat.renderQueue = 3000;
-                        transMat.color = new Color(shieldColor.r, shieldColor.g, shieldColor.b, shieldOpacity);
-                        renderer.material = transMat;
-                    }
-                }
+                if (renderer != null) renderer.enabled = false; // INVISIBLE
 
+                // 2. Create the World-Space UI Visuals
+                GameObject canvasGO = new GameObject("Shield_UI_Canvas", typeof(Canvas));
+                canvasGO.transform.SetParent(_globalShield.transform, false);
+                
+                Canvas canvas = canvasGO.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.WorldSpace;
+                
+                // Adjust size to match the 8x8 collider roughly
+                RectTransform canvasRT = canvasGO.GetComponent<RectTransform>();
+                canvasRT.sizeDelta = new Vector2(800, 800); 
+                canvasRT.localScale = Vector3.one * 0.01f; // Back to world units
+                
+                GameObject imageGO = new GameObject("Shield_Image", typeof(UnityEngine.UI.Image));
+                imageGO.transform.SetParent(canvasGO.transform, false);
+                
+                _shieldImage = imageGO.GetComponent<UnityEngine.UI.Image>();
+                RectTransform imageRT = imageGO.GetComponent<RectTransform>();
+                imageRT.anchorMin = Vector2.zero;
+                imageRT.anchorMax = Vector2.one;
+                imageRT.sizeDelta = Vector2.zero;
+
+                // Simple hollow effect: If a sprite is not available, we can use a ring-like layout
+                // or just a solid color. For now, solid color with alpha.
+                _shieldImage.color = new Color(shieldColor.r, shieldColor.g, shieldColor.b, 0); 
+                
                 _globalShield.AddComponent<HandShield>();
             }
 

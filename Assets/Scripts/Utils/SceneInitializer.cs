@@ -36,7 +36,7 @@ namespace Amapolas.Utils
 
             // 3. Create Knife Spawn Point
             GameObject spawnPoint = new GameObject("KnifeSpawnPoint");
-            spawnPoint.transform.position = new Vector3(0, 1.6f, 20f);
+            spawnPoint.transform.position = new Vector3(0, 1.6f, 50f); // Further back for the larger corridor
             
             var gameplay = managersGO.GetComponent<Gameplay.GameplayManager>();
             gameplay.knifeSpawnPoint = spawnPoint.transform;
@@ -75,9 +75,9 @@ namespace Amapolas.Utils
             gameplay.amapolaPrefab = amapolaPlaceholder;
 
             // 6. Support for Hand Shields
-            GameObject shieldTemplate = CreateShield(new Vector3(0, -10, 0), "Shield_Template");
+            // Note: HandBlockingManager now handles its own World-Space UI shield if prefab is null
             var blockingManager = managersGO.GetComponent<Gameplay.HandBlockingManager>();
-            blockingManager.shieldPrefab = shieldTemplate;
+            blockingManager.shieldPrefab = null; 
             
             // Note: We don't need static shields anymore as they are spawned by manager
 
@@ -224,32 +224,32 @@ namespace Amapolas.Utils
             // Create a simple blocking prefab for the tile
             GameObject tile = new GameObject("CorridorTile_Blocking");
             
-            // Floor
+            // Larger Floor
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "Floor";
             floor.transform.SetParent(tile.transform);
-            floor.transform.localScale = new Vector3(5, 0.1f, 10);
+            floor.transform.localScale = new Vector3(10, 0.1f, 10); // Wider
             
-            // Left Wall
+            // Larger Left Wall
             GameObject leftWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             leftWall.name = "LeftWall";
             leftWall.transform.SetParent(tile.transform);
-            leftWall.transform.position = new Vector3(-2.5f, 2.5f, 0);
-            leftWall.transform.localScale = new Vector3(0.1f, 5, 10);
+            leftWall.transform.position = new Vector3(-5f, 5f, 0); // Further left and taller
+            leftWall.transform.localScale = new Vector3(0.1f, 10, 10);
 
-            // Right Wall
+            // Larger Right Wall
             GameObject rightWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
             rightWall.name = "RightWall";
             rightWall.transform.SetParent(tile.transform);
-            rightWall.transform.position = new Vector3(2.5f, 2.5f, 0);
-            rightWall.transform.localScale = new Vector3(0.1f, 5, 10);
+            rightWall.transform.position = new Vector3(5f, 5f, 0); // Further right and taller
+            rightWall.transform.localScale = new Vector3(0.1f, 10, 10);
 
-            // Ceiling
+            // Larger Ceiling
             GameObject ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
             ceiling.name = "Ceiling";
             ceiling.transform.SetParent(tile.transform);
-            ceiling.transform.position = new Vector3(0, 5, 0);
-            ceiling.transform.localScale = new Vector3(5, 0.1f, 10);
+            ceiling.transform.position = new Vector3(0, 10, 0); // Taller
+            ceiling.transform.localScale = new Vector3(10, 0.1f, 10);
 
             tile.transform.position = new Vector3(0, 0, -100); // Hide template
             var ic = root.GetComponent<Gameplay.InfiniteCorridor>();
