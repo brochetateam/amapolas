@@ -11,7 +11,7 @@ namespace Amapolas.Gameplay
         [Header("Shield System Settings")]
         public GameObject shieldPrefab; // Reference to the big shield prefab
         public float blockHeightThreshold = 0.4f; // Normalized Y (0-1). > 0.4 means hands are "up"
-        public float shieldDistance = 0.8f; // Closer to avoid central obstruction
+        public float shieldDistance = 1.5f; // Increased buffer to avoid double triggers
         
         [Header("Visuals (Auto-applied if no prefab)")]
         [Range(0f, 1f)] public float shieldOpacity = 0.02f; 

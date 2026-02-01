@@ -139,6 +139,21 @@ namespace Amapolas.Utils
             
             gui.healthSlider = slider;
 
+            // 7c. Symbolic Word Text
+            GameObject wordGO = new GameObject("SymbolicWordText", typeof(TextMeshProUGUI));
+            wordGO.transform.SetParent(canvasGO.transform, false);
+            var wordTMP = wordGO.GetComponent<TextMeshProUGUI>();
+            wordTMP.alignment = TextAlignmentOptions.Top;
+            wordTMP.fontSize = 36;
+            wordTMP.fontStyle = FontStyles.Bold;
+            wordTMP.text = "";
+            wordGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -100);
+            wordGO.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 1);
+            wordGO.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1);
+            wordGO.SetActive(false);
+            
+            gui.wordText = wordTMP;
+
             // 8. Setup Feedback Overlays
             gui.hitOverlay = CreateOverlay(canvasGO.transform, "HitOverlay", new Color(1, 0, 0, 0));
             gui.blockOverlay = CreateOverlay(canvasGO.transform, "BlockOverlay", new Color(0, 1, 0, 0));

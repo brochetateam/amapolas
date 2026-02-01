@@ -15,6 +15,7 @@ namespace Amapolas.Managers
         public Image hitOverlay;
         public Image blockOverlay;
         public Slider healthSlider;
+        public TextMeshProUGUI wordText;
 
         private void Awake()
         {
@@ -57,6 +58,24 @@ namespace Amapolas.Managers
         public void HideMessages()
         {
             if (messagePanel != null) messagePanel.SetActive(false);
+        }
+
+        public void DisplayWord(string word, Color color)
+        {
+            if (wordText != null)
+            {
+                wordText.text = word;
+                wordText.color = color;
+                wordText.gameObject.SetActive(true);
+            }
+        }
+
+        public void ClearWord()
+        {
+            if (wordText != null)
+            {
+                wordText.gameObject.SetActive(false);
+            }
         }
 
         public void TriggerHitFeedback()

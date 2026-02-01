@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Amapolas.Utils;
 
 namespace Amapolas.Gameplay
 {
@@ -122,6 +123,14 @@ namespace Amapolas.Gameplay
             projectile.type = spawnAmapola ? ProjectileType.Amapola : ProjectileType.Knife;
             projectile.speed = gameSpeed * 1.5f;
 
+            // Display symbolic word
+            if (Managers.GameUI.Instance != null)
+            {
+                string word = spawnAmapola ? GameWords.GetRandomKind() : GameWords.GetRandomHurtful();
+                Color wordColor = spawnAmapola ? Color.green : Color.red;
+                Managers.GameUI.Instance.DisplayWord(word, wordColor);
+            }
+
             _isProjectileActive = true;
         }
     }
@@ -169,10 +178,13 @@ namespace Amapolas.Gameplay
             if (isResolved) return;
             isResolved = true;
             if (GameplayManager.Instance != null) GameplayManager.Instance.NotifyProjectileResolved();
+            if (Managers.GameUI.Instance != null) Managers.GameUI.Instance.ClearWord();
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            if (isResolved) return;
+
             if (other.CompareTag("Shield")) 
             {
                 isDeflected = true;
