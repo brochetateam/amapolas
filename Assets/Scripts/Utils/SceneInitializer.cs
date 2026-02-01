@@ -154,6 +154,22 @@ namespace Amapolas.Utils
             
             gui.wordText = wordTMP;
 
+            // 7d. Story Phrase Text (Continuous)
+            GameObject storyGO = new GameObject("StoryPhraseText", typeof(TextMeshProUGUI));
+            storyGO.transform.SetParent(canvasGO.transform, false);
+            var storyTMP = storyGO.GetComponent<TextMeshProUGUI>();
+            storyTMP.alignment = TextAlignmentOptions.Center;
+            storyTMP.fontSize = 28;
+            storyTMP.fontStyle = FontStyles.Italic;
+            storyTMP.text = "";
+            storyTMP.color = new Color(1f, 0.85f, 0.2f, 0f); // Gold
+            storyGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -200);
+            storyGO.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 1);
+            storyGO.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 1);
+            storyGO.SetActive(false);
+            
+            gui.storyText = storyTMP;
+
             // 7d. Final Completion Message
             GameObject finalGO = new GameObject("FinalCompletionMessage", typeof(TextMeshProUGUI));
             finalGO.transform.SetParent(canvasGO.transform, false);

@@ -16,6 +16,7 @@ namespace Amapolas.Managers
         public Image blockOverlay;
         public Slider healthSlider;
         public TextMeshProUGUI wordText;
+        public TextMeshProUGUI storyText;
         public TextMeshProUGUI finalMessageText;
 
         private void Awake()
@@ -69,6 +70,42 @@ namespace Amapolas.Managers
                 wordText.color = color;
                 wordText.gameObject.SetActive(true);
             }
+        }
+
+        public void DisplayStoryPhrase(string phrase)
+        {
+            if (storyText == null) return;
+            StartCoroutine(AnimateStoryPhrase(phrase));
+        }
+
+        private IEnumerator AnimateStoryPhrase(string phrase)
+        {
+            storyText.text = phrase;
+            storyText.color = new Color(1f, 0.85f, 0.2f, 0f); // Gold/Yellow
+            storyText.gameObject.SetActive(true);
+            storyText.alpha = 0f;
+
+            // Fade in
+            float elapsed = 0f;
+            float duration = 1.2f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                storyText.alpha = Mathf.Clamp01(elapsed / duration);
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(3.5f); // Look for 3.5s
+
+            // Fade out
+            elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                storyText.alpha = Mathf.Clamp01(1f - (elapsed / duration));
+                yield return null;
+            }
+            storyText.gameObject.SetActive(false);
         }
 
         public void ClearWord()

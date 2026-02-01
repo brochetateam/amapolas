@@ -16,7 +16,10 @@ namespace Amapolas.Utils
             "TE JUZGAN",
             "TE MIRAN",
             "FALLARÁS",
-            "NADIE TE ENTIENDE"
+            "NADIE TE ENTIENDE",
+            "NO ENCAJAS",
+            "ERES DÉBIL",
+            "DECEPCIÓN"
         };
 
         public static readonly string[] KindWords = new string[]
@@ -31,10 +34,33 @@ namespace Amapolas.Utils
             "RESPIRA",
             "TODO PASARÁ",
             "ERES FUERTE",
-            "ESTAMOS AQUÍ"
+            "ESTAMOS AQUÍ",
+            "VALES MUCHO",
+            "ERES CAPAZ",
+            "LUCHADOR"
+        };
+
+        public static readonly string[] StoryPhrases = new string[]
+        {
+            "AL PRINCIPIO ERA FÁCIL",
+            "PERO EL RUIDO CRECIÓ",
+            "ME ESCONDÍ TRAS UN MURO",
+            "OLVIDÉ MI PROPIA VOZ",
+            "HOY ELIJO SOLTAR EL PESO",
+            "ME QUITO LA MÁSCARA",
+            "POR FIN RESPIRO",
+            "SOY SUFICIENTE",
+            "SOY LIBRE"
         };
 
         public static string GetRandomHurtful() => HurtfulWords[Random.Range(0, HurtfulWords.Length)];
         public static string GetRandomKind() => KindWords[Random.Range(0, KindWords.Length)];
+        
+        // Iterates through story phrases based on progress (0 to 1)
+        public static string GetStoryPhrase(float progress)
+        {
+            int index = Mathf.FloorToInt(progress * (StoryPhrases.Length - 1));
+            return StoryPhrases[index];
+        }
     }
 }
