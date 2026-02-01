@@ -30,6 +30,7 @@ namespace Amapolas.Gameplay
         private bool isGameActive = false;
         private bool _isProjectileActive = false;
         private float _gameStartTime = 0f;
+        private bool _hasJumpedAudio = false;
 
         private void Awake()
         {
@@ -69,13 +70,13 @@ namespace Amapolas.Gameplay
         {
             _narrativeQueue.Clear();
             _narrativeQueue.Add(new NarrativeEvent { timestamp = 0f, phrase = "Al principio era fácil...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 30f, phrase = "Pero el ruido exterior creció...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 60f, phrase = "Me escondí tras un muro...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 90f, phrase = "Olvidé mi propia voz...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 150f, phrase = "Hoy elijo soltar el peso...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 180f, phrase = "Me quito la máscara...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 210f, phrase = "Por fin respiro...", triggered = false });
-            _narrativeQueue.Add(new NarrativeEvent { timestamp = 230f, phrase = "Soy suficiente.", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 25f, phrase = "Pero el ruido exterior creció...", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 50f, phrase = "Me escondí tras un muro...", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 75f, phrase = "Olvidé mi propia voz...", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 95f, phrase = "Hoy elijo soltar el peso...", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 105f, phrase = "Me quito la máscara...", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 112f, phrase = "Por fin respiro...", triggered = false });
+            _narrativeQueue.Add(new NarrativeEvent { timestamp = 118f, phrase = "Soy suficiente.", triggered = false });
         }
 
         public void StartGame()
@@ -125,9 +126,15 @@ namespace Amapolas.Gameplay
             // Background speed drift
             gameSpeed += Time.deltaTime * 0.05f;
 
-            float currentTime = _bgmSource != null ? _bgmSource.time : (Time.time - _gameStartTime);
+            float currentTime = _bgmSource != null ? (_hasJumpedAudio ? (_bgmSource.time - (_bgmSource.clip.length - 120)) : _bgmSource.time) : (Time.time - _gameStartTime);
 
-            // Trigger narrative events
+            // Audio Jump Logic: Skip from 60s to clip.length - 60s
+            if (_bgmSource != null && !_hasJumpedAudio && _bgmSource.time >= 60f)
+            {
+                _hasJumpedAudio = true;
+                _bgmSource.time = _bgmSource.clip.length - 60f;
+                Debug.Log("Audio jumped to last minute.");
+            }
             for (int i = 0; i < _narrativeQueue.Count; i++)
             {
                 var ev = _narrativeQueue[i];
@@ -198,31 +205,28 @@ namespace Amapolas.Gameplay
             float currentSpawnDelay = timeBetweenSpawns;
 
             // UPDATED NARRATIVE PHASES LOOP (Gameplay difficulty only)
-            if (currentTime < 60f) // 0-60s: Innocence / Early Judgment
+            // CONDENSED 2-MINUTE PHASES (120s)
+            if (currentTime < 40f) // 0-40s: Innocence -> Early Pressure
             {
-                // 80% Amapolas initially, decreasing toward 50% near 60s
-                spawnAmapola = Random.value > Mathf.Lerp(0.2f, 0.5f, currentTime / 60f);
-                currentSpawnDelay = 2.5f;
+                spawnAmapola = Random.value > Mathf.Lerp(0.2f, 0.6f, currentTime / 40f);
+                currentSpawnDelay = 2.2f;
             }
-            else if (currentTime < 150f) // 60-150s: The Mask (Increasing intensity)
+            else if (currentTime < 80f) // 40-80s: The Mask (High intensity)
             {
-                // Mostly knives
-                spawnAmapola = Random.value > 0.9f; 
-                currentSpawnDelay = Mathf.Lerp(2.0f, 1.2f, (currentTime - 60f) / 90f);
-                gameSpeed = Mathf.Max(gameSpeed, 7f);
+                spawnAmapola = Random.value > 0.95f; 
+                currentSpawnDelay = Mathf.Lerp(1.8f, 1.1f, (currentTime - 40f) / 40f);
+                gameSpeed = Mathf.Max(gameSpeed, 8f);
             }
-            else if (currentTime < 200f) // 150-200s: Transition
+            else if (currentTime < 100f) // 80-100s: Transition
             {
-                // 50/50 mix
-                spawnAmapola = Random.value > 0.5f;
-                currentSpawnDelay = 1.8f;
+                spawnAmapola = Random.value > 0.4f;
+                currentSpawnDelay = 1.6f;
             }
-            else // 200s to end: The Awakening
+            else // 100-120s: The Awakening
             {
-                // Pure Amapolas
                 spawnAmapola = true;
-                currentSpawnDelay = 3.5f;
-                gameSpeed = Mathf.Max(gameSpeed * 0.98f, 3.5f);
+                currentSpawnDelay = 3.0f;
+                gameSpeed = Mathf.Max(gameSpeed * 0.97f, 3.5f);
             }
 
             GameObject prefab = spawnAmapola ? amapolaPrefab : knifePrefab;

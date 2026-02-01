@@ -6,11 +6,9 @@ Este documento detalla la progresión emocional y verbal de la experiencia. Los 
 
 | Tiempo | Fase | Descripción Emocional | Mecánica |
 | :--- | :--- | :--- | :--- |
-| **00:00 - 00:40** | **Inocencia** | Calma, seguridad, antes del ruido. | Solo Amapolas. Palabras de apoyo. |
-| **00:40 - 01:30** | **El Juicio** | Primeras dudas, comentarios externos. | Mezcla (50/50). Aparecen los primeros cuchillos. |
-| **01:30 - 02:30** | **La Máscara** | Presión máxima, "masking", defensa. | **100% Cuchillos**. El pasillo acelera. |
-| **02:30 - 03:00** | **La Lucha** | Intento de equilibrio y agotamiento. | Mezcla caótica. Transición de ritmo. |
-| **03:00 - 04:00** | **El Despertar** | Liberación, aceptación, paz. | Solo Amapolas + **Frases de la Historia**. |
+| **00:00 - 00:40** | **Inocencia/Juicio** | De la calma a la presión externa. | Amapolas -> Cuchillos crecientes. |
+| **00:40 - 01:10** | **La Máscara** | Presión máxima, "masking". | **100% Cuchillos**. Pico de tensión. |
+| **01:10 - 02:00** | **El Despertar** | Liberación y frases de historia. | Solo Amapolas + **Frases de Historia**. |
 
 ---
 
